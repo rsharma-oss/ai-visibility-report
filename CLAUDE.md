@@ -17,7 +17,15 @@ This is the most common entry point. The user has pasted the repo URL into Claud
 
 3. **Collect the required config values.** If the user has already provided them in their message, use those directly. If not, ask for all of them at once in a single message — do not ask one by one:
    - AI Peekaboo API key (starts with `pk_`)
-   - Anthropic API key (starts with `sk-ant-`)
+   - LLM provider and API key — ask which LLM they use. Common choices:
+     - Anthropic / Claude: `sk-ant-...` → `llm_provider: "anthropic"`
+     - OpenAI / ChatGPT: `sk-...` → `llm_provider: "openai"`
+     - Google Gemini: `AIza...` → `llm_provider: "gemini"`
+     - Groq: `gsk_...` → `llm_provider: "groq"`
+     - OpenRouter: `sk-or-...` → `llm_provider: "openrouter"`
+     - Mistral: `...` → `llm_provider: "mistral"`
+     - Any OpenAI-compatible API: use `llm_provider: "openai"` and add `llm_base_url` pointing to the endpoint
+   - Optional: `llm_model` — defaults are set per provider, but they can override (e.g. `gpt-4-turbo`, `claude-opus-4-7`)
    - Brand name, brand ID (UUID from the AI Peekaboo dashboard URL), and brand domain
    - Output filename (default: `report.html`)
    - If they want to compare two brands, collect details for both
@@ -40,7 +48,7 @@ Do not ask the user to do any of these steps themselves. You have all the tools 
 
 This tool generates AI visibility prospect reports for marketing agencies. Each report shows a brand's visibility across 5 AI models (Perplexity, ChatGPT, Gemini, Google AIO, Google AI Mode), with prompts data, sentiment analysis, competitor rankings, citation analysis, and auto-generated action recommendations.
 
-The pipeline fetches live data from the AI Peekaboo API, processes it, calls Claude (`claude-sonnet-4-6`) to generate 6 data-driven recommendations per brand, then injects everything into `template.html` and writes a single self-contained HTML file.
+The pipeline fetches live data from the AI Peekaboo API, processes it, calls any configured LLM (Anthropic, OpenAI, Gemini, Groq, Mistral, OpenRouter, or any OpenAI-compatible API) to generate 6 data-driven recommendations per brand, then injects everything into `template.html` and writes a single self-contained HTML file.
 
 ---
 
@@ -56,7 +64,10 @@ cp config.example.json config.json
 
 Then ask the user to provide:
 - `aipeekaboo_api_key` — their AI Peekaboo API key (starts with `pk_`)
-- `anthropic_api_key` — their Anthropic API key (starts with `sk-ant-`)
+- `llm_provider` — which LLM to use: `"anthropic"`, `"openai"`, `"gemini"`, `"groq"`, `"openrouter"`, `"mistral"`, or any OpenAI-compatible provider
+- `llm_api_key` — their API key for the chosen provider
+- `llm_model` — (optional) override the default model for that provider
+- `llm_base_url` — (optional) custom base URL for self-hosted or unlisted OpenAI-compatible APIs
 - `brands` — an array of brand objects (see below)
 - `report_title` — the title shown in the report header
 - `output_file` — filename for the generated report (default: `report.html`)
@@ -133,7 +144,7 @@ Every domain name, citation count, and competitor mentioned in the actions comes
    |---|---|---|
    | `"unknown"` model names everywhere | Using `entry['model']` instead of `entry['aiModel']` | The field is `aiModel` in history entries — check `build.py` |
    | 429 rate limit errors | Too many API requests in a short window | The build script has built-in retry logic; if it persists, increase sleep intervals |
-   | Missing API key errors | Placeholder values still in `config.json` | Ask the user to replace `pk_YOUR_KEY_HERE` and `sk-ant-YOUR_KEY_HERE` |
+   | Missing API key errors | Placeholder values still in `config.json` | Ask the user to replace `pk_YOUR_KEY_HERE` and set `llm_provider` + `llm_api_key` |
    | Empty citation data | `include_full_response=true` not passed | Verify the prompt detail endpoint includes this query param |
    | Brand not found (404) | Wrong brand UUID in config | Re-check the brand ID from the dashboard URL or via `GET /brands` |
 

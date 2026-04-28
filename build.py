@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 build.py — AI Visibility Report Generator
-Pulls data from AI Peekaboo API, generates Claude-powered action recommendations,
+Pulls data from AI Peekaboo API, generates LLM-powered action recommendations,
 and injects everything into template.html to produce a self-contained report.
 
 Usage:
@@ -17,7 +17,71 @@ from collections import defaultdict
 from urllib.parse import urlparse
 
 import requests
-import anthropic
+
+# ─── LLM provider configs ─────────────────────────────────────────────────────
+
+PROVIDER_CONFIGS = {
+    "anthropic":  {
+        "base_url": "https://api.anthropic.com/v1",
+        "default_model": "claude-sonnet-4-6",
+        "extra_headers": {"anthropic-version": "2023-06-01"},
+    },
+    "openai": {
+        "base_url": "https://api.openai.com/v1",
+        "default_model": "gpt-4o",
+        "extra_headers": {},
+    },
+    "google": {
+        "base_url": "https://generativelanguage.googleapis.com/v1beta/openai/",
+        "default_model": "gemini-2.0-flash",
+        "extra_headers": {},
+    },
+    "gemini": {
+        "base_url": "https://generativelanguage.googleapis.com/v1beta/openai/",
+        "default_model": "gemini-2.0-flash",
+        "extra_headers": {},
+    },
+    "groq": {
+        "base_url": "https://api.groq.com/openai/v1",
+        "default_model": "llama-3.3-70b-versatile",
+        "extra_headers": {},
+    },
+    "openrouter": {
+        "base_url": "https://openrouter.ai/api/v1",
+        "default_model": "anthropic/claude-sonnet-4-6",
+        "extra_headers": {},
+    },
+    "mistral": {
+        "base_url": "https://api.mistral.ai/v1",
+        "default_model": "mistral-large-latest",
+        "extra_headers": {},
+    },
+}
+
+
+def call_llm(provider, api_key, model, system_prompt, user_prompt, base_url=None):
+    """Call any OpenAI-compatible LLM provider and return the text response."""
+    try:
+        from openai import OpenAI
+    except ImportError:
+        print("Error: 'openai' package not installed. Run: pip install openai")
+        sys.exit(1)
+
+    pconf = PROVIDER_CONFIGS.get(provider, {})
+    resolved_url = base_url or pconf.get("base_url", "https://api.openai.com/v1")
+    extra_headers = pconf.get("extra_headers", {})
+
+    client = OpenAI(api_key=api_key, base_url=resolved_url, default_headers=extra_headers)
+    response = client.chat.completions.create(
+        model=model,
+        max_tokens=4096,
+        messages=[
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": user_prompt},
+        ],
+    )
+    return response.choices[0].message.content.strip()
+
 
 # ─── Config ──────────────────────────────────────────────────────────────────
 
@@ -27,7 +91,13 @@ def load_config(path="config.json"):
         sys.exit(1)
     with open(path) as f:
         cfg = json.load(f)
-    required = ["aipeekaboo_api_key", "anthropic_api_key", "brands"]
+
+    # Backward compat: old anthropic_api_key field
+    if "anthropic_api_key" in cfg and "llm_api_key" not in cfg:
+        cfg["llm_api_key"] = cfg["anthropic_api_key"]
+        cfg.setdefault("llm_provider", "anthropic")
+
+    required = ["aipeekaboo_api_key", "llm_api_key", "brands"]
     for key in required:
         if key not in cfg:
             print(f"Error: missing required config key: {key}")
@@ -163,8 +233,6 @@ def extract_domain(url):
 
 
 def comp_domain_from_name(name):
-    """Derive a best-guess domain from a competitor name."""
-    # Known overrides for common brands
     known = {
         "google": "google.com",
         "microsoft": "microsoft.com",
@@ -231,13 +299,11 @@ def process_brand_data(api_key, brand_cfg):
             score = entry.get("score", 0) or 0
             rank = entry.get("rank")
             sentiment = entry.get("sentiment")
-            # Normalize sentiment value
             if sentiment:
                 sentiment = sentiment.lower()
                 if sentiment not in ("positive", "negative", "neutral", "uncertain"):
                     sentiment = "neutral"
 
-            # Grab first 300 chars of response
             response_text = (
                 entry.get("response") or
                 entry.get("fullResponse") or
@@ -273,7 +339,6 @@ def process_brand_data(api_key, brand_cfg):
                         ],
                     })
 
-            # Collect citations
             sources = (
                 entry.get("sources") or
                 entry.get("citedSources") or []
@@ -284,7 +349,6 @@ def process_brand_data(api_key, brand_cfg):
                 if url:
                     all_citations.append((url, title, model_key))
 
-            # Collect entities
             for ent in entry.get("entities", []):
                 ent_type = (ent.get("type") or ent.get("entityType") or "").lower()
                 if ent_type in ("competitor", "COMPETITOR".lower()):
@@ -304,7 +368,7 @@ def process_brand_data(api_key, brand_cfg):
         })
 
     # ── Citations aggregation ─────────────────────────────────────────────────
-    url_data = {}  # url -> {title, count, models set, mc dict}
+    url_data = {}
     for url, title, model_key in all_citations:
         if url not in url_data:
             url_data[url] = {"title": title, "count": 0, "models": set(), "mc": defaultdict(int)}
@@ -312,9 +376,8 @@ def process_brand_data(api_key, brand_cfg):
         url_data[url]["models"].add(model_key)
         url_data[url]["mc"][model_key] += 1
 
-    # Domain-level aggregation
     domain_counts = defaultdict(int)
-    domain_url_list = defaultdict(list)  # domain -> list of url records
+    domain_url_list = defaultdict(list)
     domain_type_counts = defaultdict(int)
     content_type_counts = defaultdict(int)
 
@@ -336,9 +399,6 @@ def process_brand_data(api_key, brand_cfg):
             "contentType": ct,
         })
 
-    all_urls = list(url_data.keys())
-    all_domains = list(domain_counts.keys())
-
     top_domains = sorted(domain_counts.items(), key=lambda x: -x[1])[:20]
     top_listicles = []
     for domain, urls in domain_url_list.items():
@@ -348,7 +408,7 @@ def process_brand_data(api_key, brand_cfg):
     top_listicles = sorted(top_listicles, key=lambda x: -x["count"])[:10]
 
     citations_out = {
-        "total": sum(c for _, c in url_data.items() if True) if False else sum(info["count"] for info in url_data.values()),
+        "total": sum(info["count"] for info in url_data.values()),
         "uniqueUrls": len(url_data),
         "uniqueDomains": len(domain_counts),
         "domainTypes": sorted(
@@ -363,7 +423,6 @@ def process_brand_data(api_key, brand_cfg):
         "topListicles": top_listicles,
     }
 
-    # ── DURL: top 40 domains, up to 12 URLs each ────────────────────────────
     top_40_domains = [d for d, _ in sorted(domain_counts.items(), key=lambda x: -x[1])[:40]]
     durl_brand = {}
     for domain in top_40_domains:
@@ -377,8 +436,6 @@ def process_brand_data(api_key, brand_cfg):
             continue
         comp_data[name]["mentions"] += 1
         comp_data[name]["models"].add(model_key)
-        # try to find score from prompt history
-        # (we attribute score 0 as placeholder; sentiment breakdown comes from mentions)
 
     competitors_out = []
     for name, info in comp_data.items():
@@ -452,7 +509,7 @@ def process_brand_data(api_key, brand_cfg):
     }
 
 
-# ─── Actions generation via Claude API ───────────────────────────────────────
+# ─── Actions generation ───────────────────────────────────────────────────────
 
 def build_actions_prompt(brand_name, brand_domain, data):
     prompts_list = data["prompts"]
@@ -479,9 +536,7 @@ def build_actions_prompt(brand_name, brand_domain, data):
         for x in content_types
     )
 
-    # model breakdown
     model_breakdown_lines = []
-    model_cit = data["modelCitations"]
     model_mentions = defaultdict(lambda: {"mentioned": 0, "total": 0})
     for p in prompts_list:
         for mk, md in p["models"].items():
@@ -500,7 +555,7 @@ def build_actions_prompt(brand_name, brand_domain, data):
         for l in top_listicles
     )
 
-    user_prompt = f"""Analyze this AI visibility data for {brand_name} and generate exactly 6 prioritized action recommendations as a JSON array.
+    return f"""Analyze this AI visibility data for {brand_name} and generate exactly 6 prioritized action recommendations as a JSON array.
 
 Brand: {brand_name} ({brand_domain})
 Prompt visibility: {vis_pct}% ({mentioned_prompts} of {total_prompts} prompts trigger a mention)
@@ -535,12 +590,15 @@ Rules:
 - Outcome timeframes: listicle inclusion = 60-90 days for citations; YouTube = 2-4 weeks; schema markup = 45-90 days.
 - Return only the JSON array, no other text."""
 
-    return user_prompt
 
+def generate_actions(cfg, brand_name, brand_domain, data):
+    provider = cfg.get("llm_provider", "anthropic")
+    api_key = cfg["llm_api_key"]
+    pconf = PROVIDER_CONFIGS.get(provider, {})
+    model = cfg.get("llm_model") or pconf.get("default_model", "gpt-4o")
+    base_url = cfg.get("llm_base_url")
 
-def generate_actions(anthropic_api_key, brand_name, brand_domain, data):
-    print(f"  Generating actions for {brand_name}...")
-    client = anthropic.Anthropic(api_key=anthropic_api_key)
+    print(f"  Generating actions for {brand_name} (via {provider} / {model})...")
 
     system = (
         "You are an expert SEO and AEO (Answer Engine Optimization) strategist. "
@@ -549,24 +607,13 @@ def generate_actions(anthropic_api_key, brand_name, brand_domain, data):
         "Write in plain language for an SEO/AEO practitioner."
     )
 
-    user_prompt = build_actions_prompt(brand_name, brand_domain, data)
+    raw = call_llm(provider, api_key, model, system, build_actions_prompt(brand_name, brand_domain, data), base_url)
 
-    message = client.messages.create(
-        model="claude-sonnet-4-6",
-        max_tokens=4096,
-        system=system,
-        messages=[{"role": "user", "content": user_prompt}],
-    )
-
-    raw = message.content[0].text.strip()
-
-    # Strip markdown code fences if present
     if raw.startswith("```"):
         raw = re.sub(r"^```[a-z]*\n?", "", raw)
         raw = re.sub(r"```$", "", raw).strip()
 
-    actions = json.loads(raw)
-    return actions
+    return json.loads(raw)
 
 
 # ─── Template injection ───────────────────────────────────────────────────────
@@ -586,7 +633,6 @@ def brand_toggle_html(brands):
 
 
 def js_obj_literal(py_obj):
-    """Serialize a Python object to a JS-compatible JSON string."""
     return json.dumps(py_obj, ensure_ascii=False)
 
 
@@ -594,8 +640,6 @@ def inject_template(template_path, output_path, brands, D, DURL, DCAT, comp_doma
                     BRAND_CFG, ACTIONS):
     with open(template_path, encoding="utf-8") as f:
         html = f.read()
-
-    first_brand_key = brands[0]["key"]
 
     replacements = {
         "%%BRAND_TOGGLE%%": brand_toggle_html(brands),
@@ -605,7 +649,7 @@ def inject_template(template_path, output_path, brands, D, DURL, DCAT, comp_doma
         "%%COMP_DOMAINS%%": js_obj_literal(comp_domains),
         "%%BRAND_CFG%%": js_obj_literal(BRAND_CFG),
         "%%ACTIONS%%": js_obj_literal(ACTIONS),
-        "%%DEFAULT_BRAND%%": first_brand_key,
+        "%%DEFAULT_BRAND%%": brands[0]["key"],
     }
 
     for placeholder, value in replacements.items():
@@ -622,14 +666,12 @@ def main():
     if len(sys.argv) > 2 and sys.argv[1] == "--config":
         config_path = sys.argv[2]
 
-    # Resolve paths relative to this script's directory
     script_dir = os.path.dirname(os.path.abspath(__file__))
     config_path = os.path.join(script_dir, config_path)
     template_path = os.path.join(script_dir, "template.html")
 
     cfg = load_config(config_path)
     api_key = cfg["aipeekaboo_api_key"]
-    anthropic_api_key = cfg["anthropic_api_key"]
     brands_cfg = cfg["brands"]
     output_file = cfg.get("output_file", "report.html")
     output_path = os.path.join(script_dir, output_file)
@@ -638,7 +680,6 @@ def main():
         print(f"Error: template.html not found at {template_path}")
         sys.exit(1)
 
-    # Accumulate data objects
     D = {
         "prompts": {},
         "citations": {},
@@ -677,8 +718,7 @@ def main():
             "url": brand_domain,
         }
 
-        actions = generate_actions(anthropic_api_key, brand_name, brand_domain, brand_data)
-        ACTIONS[brand_key] = actions
+        ACTIONS[brand_key] = generate_actions(cfg, brand_name, brand_domain, brand_data)
 
     print(f"\nWriting report to {output_file}...")
     inject_template(
