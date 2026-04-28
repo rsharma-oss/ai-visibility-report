@@ -1,9 +1,10 @@
 {
   "aipeekaboo_api_key": "pk_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
 
-  "llm_provider": "anthropic",
-  "llm_api_key": "sk-ant-api03-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
-  "llm_model": "claude-sonnet-4-6",
+  "_llm_comment": "If running inside Claude Code: set llm_provider to 'claude-cli' and omit llm_api_key entirely. Claude Code will call itself — no separate API key needed.",
+  "llm_provider": "claude-cli",
+
+  "_llm_other_providers": "Alternatives: 'anthropic' (sk-ant-...), 'openai' (sk-...), 'gemini' (AIza...), 'groq' (gsk_...), 'openrouter' (sk-or-...), 'mistral'. Add llm_api_key when using these.",
 
   "brands": [
     {
@@ -11,12 +12,6 @@
       "name": "Acme AI",
       "key": "acme",
       "domain": "acme.ai"
-    },
-    {
-      "id": "yyyyyyyy-yyyy-yyyy-yyyy-yyyyyyyyyyyy",
-      "name": "Rival Co",
-      "key": "rival",
-      "domain": "rivalco.com"
     }
   ],
   "report_title": "Acme AI Visibility Report",

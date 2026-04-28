@@ -11,6 +11,7 @@ Usage:
 import json
 import os
 import re
+import subprocess
 import sys
 import time
 from collections import defaultdict
@@ -61,6 +62,14 @@ PROVIDER_CONFIGS = {
 
 def call_llm(provider, api_key, model, system_prompt, user_prompt, base_url=None):
     """Call any OpenAI-compatible LLM provider and return the text response."""
+    if provider == "claude-cli":
+        full_prompt = f"{system_prompt}\n\n{user_prompt}"
+        cmd = ["claude", "-p", "-"]
+        if model:
+            cmd += ["--model", model]
+        result = subprocess.run(cmd, input=full_prompt, capture_output=True, text=True, check=True)
+        return result.stdout.strip()
+
     try:
         from openai import OpenAI
     except ImportError:
@@ -97,11 +106,14 @@ def load_config(path="config.json"):
         cfg["llm_api_key"] = cfg["anthropic_api_key"]
         cfg.setdefault("llm_provider", "anthropic")
 
-    required = ["aipeekaboo_api_key", "llm_api_key", "brands"]
+    required = ["aipeekaboo_api_key", "brands"]
+    if cfg.get("llm_provider", "anthropic") != "claude-cli":
+        required.append("llm_api_key")
     for key in required:
         if key not in cfg:
             print(f"Error: missing required config key: {key}")
             sys.exit(1)
+    cfg.setdefault("llm_api_key", "none")
     return cfg
 
 
@@ -287,7 +299,7 @@ def process_brand_data(api_key, brand_cfg):
             print(f"    Warning: could not fetch detail for prompt {prompt_id}: {e}")
             detail = p
 
-        history = detail.get("history") or []
+        history = (detail.get("data") or {}).get("history") or detail.get("history") or []
 
         models_data = {}
         scores = []
@@ -333,9 +345,9 @@ def process_brand_data(api_key, brand_cfg):
                         "reason": entry.get("sentimentReason") or "",
                         "context": snippet[:200],
                         "competitors": [
-                            e.get("name", "")
-                            for e in entry.get("entities", [])
-                            if (e.get("type") or e.get("entityType") or "").lower() == "competitor"
+                            e.get("entityName") or e.get("name", "")
+                            for e in (entry.get("brandMentions") or entry.get("entities") or [])
+                            if (e.get("type") or e.get("entityType") or "").lower() in ("competitor", "untracked")
                         ],
                     })
 
@@ -349,10 +361,10 @@ def process_brand_data(api_key, brand_cfg):
                 if url:
                     all_citations.append((url, title, model_key))
 
-            for ent in entry.get("entities", []):
+            for ent in (entry.get("brandMentions") or entry.get("entities") or []):
                 ent_type = (ent.get("type") or ent.get("entityType") or "").lower()
-                if ent_type in ("competitor", "COMPETITOR".lower()):
-                    all_entities.append((ent.get("name", ""), "competitor", model_key))
+                if ent_type in ("competitor", "untracked"):
+                    all_entities.append((ent.get("entityName") or ent.get("name", ""), "competitor", model_key))
 
         avg_score = round(sum(scores) / len(scores), 2) if scores else 0.0
         best_score = max(scores) if scores else 0

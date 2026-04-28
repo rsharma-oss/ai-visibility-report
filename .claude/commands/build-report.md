@@ -17,8 +17,9 @@ cp config.example.json config.json
 ```
 
 After copying, read the file and walk the user through each field they need to fill in:
-- `aipeekaboo_api_key` — their AI Peekaboo API key (should start with `pk_`, not the placeholder `pk_YOUR_KEY_HERE`)
-- `anthropic_api_key` — their Anthropic API key (should start with `sk-ant-`, not `sk-ant-YOUR_KEY_HERE`)
+- `aipeekaboo_api_key` — their AI Peekaboo API key (should start with `pk_`, not the placeholder)
+- `llm_provider` — **if running inside Claude Code, use `"claude-cli"` and skip `llm_api_key` entirely**. Otherwise choose: `"anthropic"`, `"openai"`, `"gemini"`, `"groq"`, `"openrouter"`, or `"mistral"`
+- `llm_api_key` — only required when `llm_provider` is NOT `"claude-cli"`. Use the key format matching the chosen provider
 - `brands` — at least one brand object with a valid UUID as the `id` field
 - `report_title` — the title to show in the report header
 - `output_file` — the filename for the output (default is fine as `report.html`)
@@ -29,10 +30,11 @@ Do not proceed until the config looks valid.
 
 Read `config.json` and check for these common mistakes:
 
-- `aipeekaboo_api_key` is still `"pk_YOUR_KEY_HERE"` -- ask the user to replace it
-- `anthropic_api_key` is still `"sk-ant-YOUR_KEY_HERE"` -- ask the user to replace it
-- `brands` array is empty -- ask the user to add at least one brand
-- Any brand has `"id": "brand-uuid"` (the placeholder) -- ask the user to replace it with their real brand UUID
+- `aipeekaboo_api_key` is still a placeholder — ask the user to replace it
+- `llm_provider` is not set — default to `"claude-cli"` if running inside Claude Code; otherwise ask
+- `llm_api_key` is a placeholder (and `llm_provider` is not `"claude-cli"`) — ask the user to replace it
+- `brands` array is empty — ask the user to add at least one brand
+- Any brand has `"id": "brand-uuid"` (the placeholder) — ask the user to replace it with their real brand UUID
 
 Tell the user where to find brand IDs if they do not know: they appear in the AI Peekaboo dashboard URL when viewing a brand, or they can list all brands via:
 
@@ -78,7 +80,10 @@ The brand UUID in `config.json` does not match any brand the API key has access 
 **"unknown" model names in the output**
 This means somewhere in the data processing, `entry['model']` is being used instead of `entry['aiModel']`. Open `build.py`, find the history entry parsing code, and correct the field name to `aiModel`.
 
-**Missing `anthropic` module**
+**`claude` command not found (when llm_provider is claude-cli)**
+The `claude` CLI is not installed or not in PATH. Run `which claude` to check. If missing, either install Claude Code or switch to a different `llm_provider` with an API key.
+
+**Missing `openai` module (when llm_provider is not claude-cli)**
 Run `pip install -r requirements.txt` and try again.
 
 **Empty or missing template.html**
