@@ -1,5 +1,41 @@
 # CLAUDE.md — AI Visibility Report
 
+## If a user just shared this repo URL and asked you to build a report
+
+This is the most common entry point. The user has pasted the repo URL into Claude Code and asked you to create a report for their brand. Do the following in order — do not wait for the user to ask you for each step:
+
+1. **Clone the repo** into a working directory:
+   ```bash
+   git clone https://github.com/filipelinsduarte/ai-visibility-report
+   cd ai-visibility-report
+   ```
+
+2. **Install dependencies:**
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+3. **Collect the required config values.** If the user has already provided them in their message, use those directly. If not, ask for all of them at once in a single message — do not ask one by one:
+   - AI Peekaboo API key (starts with `pk_`)
+   - Anthropic API key (starts with `sk-ant-`)
+   - Brand name, brand ID (UUID from the AI Peekaboo dashboard URL), and brand domain
+   - Output filename (default: `report.html`)
+   - If they want to compare two brands, collect details for both
+
+4. **Create `config.json`** from the provided values. Use `config.example.json` as the structure reference.
+
+5. **Run the build:**
+   ```bash
+   python3 build.py
+   ```
+   This takes 5-6 minutes for a 30-prompt brand. Tell the user upfront so they are not surprised. Stream the output so they can see progress.
+
+6. **Report back** with the output file path. Ask if they want to deploy to GitHub Pages or just use the file locally.
+
+Do not ask the user to do any of these steps themselves. You have all the tools to handle them.
+
+---
+
 ## What this project is
 
 This tool generates AI visibility prospect reports for marketing agencies. Each report shows a brand's visibility across 5 AI models (Perplexity, ChatGPT, Gemini, Google AIO, Google AI Mode), with prompts data, sentiment analysis, competitor rankings, citation analysis, and auto-generated action recommendations.
