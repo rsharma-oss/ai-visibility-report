@@ -275,6 +275,27 @@ def comp_domain_from_name(name):
 
 # ─── Data processing ─────────────────────────────────────────────────────────
 
+def _brand_context(text, brand_name, window=600):
+    """Extract a text window centred on the brand mention in the full response."""
+    if not text:
+        return ""
+    idx = text.find(brand_name)
+    if idx == -1:
+        # Try case-insensitive
+        lower = text.lower()
+        idx = lower.find(brand_name.lower())
+    if idx == -1:
+        return text[:window]
+    start = max(0, idx - window // 3)
+    end = min(len(text), idx + 2 * window // 3)
+    excerpt = text[start:end].strip()
+    if start > 0:
+        excerpt = "…" + excerpt
+    if end < len(text):
+        excerpt = excerpt + "…"
+    return excerpt
+
+
 def process_brand_data(api_key, brand_cfg):
     """Fetch and process all data for a single brand."""
     brand_id = brand_cfg["id"]
@@ -336,14 +357,23 @@ def process_brand_data(api_key, brand_cfg):
                 scores.append(score)
 
                 if sentiment:
+                    full_resp = (
+                        entry.get("fullResponse") or
+                        entry.get("response") or
+                        entry.get("responseText") or ""
+                    )
                     sentiment_mentions.append({
                         "prompt": prompt_text,
                         "model": model_key,
                         "rank": rank,
                         "score": score,
                         "sentiment": sentiment,
-                        "reason": entry.get("sentimentReason") or "",
-                        "context": snippet[:200],
+                        "reason": next(
+                            (b.get("mentionSummary", "") for b in (entry.get("brandMentions") or [])
+                             if (b.get("entityName") or "").lower() == brand_name.lower()),
+                            entry.get("mentionSummary", "") or entry.get("sentimentReason") or ""
+                        )[:400],
+                        "context": _brand_context(full_resp, brand_name, 600) or snippet[:400],
                         "competitors": [
                             e.get("entityName") or e.get("name", "")
                             for e in (entry.get("brandMentions") or entry.get("entities") or [])
@@ -365,6 +395,47 @@ def process_brand_data(api_key, brand_cfg):
                 ent_type = (ent.get("type") or ent.get("entityType") or "").lower()
                 if ent_type in ("competitor", "untracked"):
                     all_entities.append((ent.get("entityName") or ent.get("name", ""), "competitor", model_key))
+
+            # Also extract agency names from fullResponse text (catches untracked competitors)
+            full_resp = entry.get("fullResponse") or ""
+            if full_resp:
+                existing_names = {
+                    (ent.get("entityName") or ent.get("name", "")).lower()
+                    for ent in (entry.get("brandMentions") or [])
+                }
+                # Patterns covering bold markdown, bullet lists, numbered lists, colon-inline
+                _extract_patterns = [
+                    r'\*\*([A-Z][A-Za-zÀ-ÿ &.\-]+?)(?:\s*[:·\|])',     # **Agency Name:**
+                    r'^\s*[\*\-]\s+([A-Z][A-Za-zÀ-ÿ &.\-]{3,40})\s*(?:[:–\|]|\n)',  # * Agency Name:
+                    r'^\s*\d+[\.\)]\s+([A-Z][A-Za-zÀ-ÿ &.\-]{3,40})\s*(?:[:–\|]|\n)',  # 1. Agency Name:
+                    r'^([A-Z][A-Za-zÀ-ÿ &.\-]{3,40}):\s+[A-Za-zÀ-ÿ]',  # Agency Name: description
+                ]
+                _non_agency = {
+                    "google", "youtube", "chatgpt", "gemini", "perplexity", "bing", "meta",
+                    "facebook", "instagram", "tiktok", "twitter", "linkedin", "openai",
+                    "anthropic", "claude", "gpt", "copilot", "wordpress", "shopify",
+                    "woocommerce", "prestashop", "magento", "semrush", "ahrefs", "moz",
+                    "hubspot", "salesforce", "mailchimp", "analytics", "search console",
+                    "amazon", "sortlist", "clutch", "goodfirms",
+                }
+                seen_in_entry = set(existing_names)
+                for pat in _extract_patterns:
+                    for m in re.finditer(pat, full_resp, re.MULTILINE | re.IGNORECASE):
+                        raw_name = m.group(1).strip().rstrip(".:,")
+                        if len(raw_name) < 4 or len(raw_name) > 50:
+                            continue
+                        lower_name = raw_name.lower()
+                        if any(skip in lower_name for skip in _non_agency):
+                            continue
+                        if lower_name in seen_in_entry:
+                            continue
+                        # Must look like a proper name (starts with capital, not all caps fragment)
+                        if not raw_name[0].isupper():
+                            continue
+                        if raw_name.upper() == raw_name and len(raw_name) < 6:
+                            continue
+                        seen_in_entry.add(lower_name)
+                        all_entities.append((raw_name, "competitor", model_key))
 
         avg_score = round(sum(scores) / len(scores), 2) if scores else 0.0
         best_score = max(scores) if scores else 0
@@ -581,9 +652,9 @@ Top listicle/roundup articles (highest-priority inclusion targets): {listicles_s
 Return a JSON array of exactly 6 objects. Each object must have these exact fields:
 {{
   "priority": "high" or "medium",
-  "effort": "High priority" or "Med effort",
+  "effort": "High effort" or "Med effort",
   "cat": one of "Visibility", "Content", "Citation Strategy", "Competitive",
-  "icon": one of "alert", "list", "play", "zap", "chat", "map", "search", "shield",
+  "icon": one of exactly: "alert", "list", "play", "zap", "chat", "map", "search", "shield", "target" -- NO emojis, these are string keys only,
   "title": "one clear directive -- what the brand should do (max 90 chars)",
   "signals": ["2-3 specific data points from the data above that make this urgent"],
   "favDomains": ["2-4 specific domain names relevant to this action"],

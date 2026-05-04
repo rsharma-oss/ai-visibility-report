@@ -164,6 +164,41 @@ Every domain name, citation count, and competitor mentioned in the actions comes
 
 ---
 
+## Data quality rules
+
+These apply every time you build or debug a report. They prevent the most common output quality issues.
+
+### Competitor data
+- `brandMentions[]` in history entries only contains entities that AI Peekaboo has tracked. The full AI response (`fullResponse`) always contains additional competitor agency names that are not in the tracked list.
+- `build.py` already runs a fullResponse regex extraction pass in addition to brandMentions. If you are debugging low competitor counts, verify this pass is running and the `_extract_patterns` list covers markdown bold (`**Name:**`), bullet lists, numbered lists, and inline colon patterns.
+- Filter out generic tools/platforms (Google, YouTube, ChatGPT, Semrush, Shopify, sortlist directories, etc.) from extracted names — these are not competitors.
+
+### Sentiment context
+- The `context` field in each sentiment mention must come from a window of `fullResponse` text centred on the brand mention, not from `responseSnippet` (which is capped at 200 chars).
+- The `reason` field must come from `brandMentions[].mentionSummary` (where `entityName` matches the brand), falling back to the entry-level `mentionSummary`. The field `sentimentReason` does not exist in the API — using it always returns empty.
+
+### Action cards
+- The `icon` field must be one of exactly 9 string keys: `alert`, `list`, `play`, `zap`, `chat`, `map`, `search`, `shield`, `target`. Never emojis. The LLM prompt must be explicit: "these are string keys only, no emojis".
+- The `effort` field must be exactly `"High effort"` or `"Med effort"` — not `"High priority"`.
+- Every `signals` entry must reference a real number from the brand's actual data (citation counts, visibility percentages, competitor mention counts).
+- Every `steps` entry that names a domain must use a domain that actually appears in the brand's citation data — not a generic example.
+
+### Header HTML (when injecting into template)
+- Brand toggle button: must use the brand's own domain for the Google favicon (`https://www.google.com/s2/favicons?domain={brand_domain}&sz=32`), not any template brand domain.
+- Report date in `.h-meta`: must match the actual month/year the report was generated.
+
+### API field names (AI Peekaboo history entries)
+| Correct field | Wrong field (do not use) |
+|---|---|
+| `entry["aiModel"]` | `entry["model"]` (always undefined) |
+| `entry["responseSnippet"]` | `entry["snippet"]` |
+| `entry["mentionSummary"]` | `entry["sentimentReason"]` (does not exist) |
+| `entry["fullResponse"]` | `entry["response"]` or `entry["responseText"]` |
+| `brandMentions[i]["entityName"]` | `brandMentions[i]["name"]` |
+| `brandMentions[i]["mentionSummary"]` | `brandMentions[i]["reason"]` |
+
+---
+
 ## GitHub Pages deployment
 
 To deploy the report as a public GitHub Pages site:
