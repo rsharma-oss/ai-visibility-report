@@ -460,7 +460,9 @@ function renderStats(){
     }
   }).concat([0]));
   var c=D.citations[bk];
-  var citTotal=activeModel!=='all'&&D.modelCitations&&D.modelCitations[bk]&&D.modelCitations[bk][activeModel]?D.modelCitations[bk][activeModel].total:c.total;
+  var mc_s=activeModel!=='all'&&D.modelCitations&&D.modelCitations[bk]&&D.modelCitations[bk][activeModel]?D.modelCitations[bk][activeModel]:null;
+  var citTotal=mc_s?mc_s.total:c.total;
+  var citUniq=mc_s&&mc_s.topDomains?mc_s.topDomains.length:c.uniqueDomains;
   /* sentiment score */
   var s=D.sentiment[bk];
   var sMentions=activeModel==='all'?s.mentions:s.mentions.filter(function(m){return m.model===activeModel;});
@@ -484,7 +486,7 @@ function renderStats(){
     '<div class="stat-card"><div class="sc-label"><span class="info-tip" data-tip="Percentage of total AI model runs where the brand was mentioned (total mentions / total runs across all prompts and models)">'+infoSvg+'</span>AI Visibility</div><div class="sc-val '+visCls+'">'+visPct+'%</div><div class="sc-sub">'+mentioned+' of '+totalRuns+' model runs include a mention</div></div>'+
     '<div class="stat-card"><div class="sc-label"><span class="info-tip" data-tip="Total number of individual AI model query executions across all prompts">'+infoSvg+'</span>Model Runs</div><div class="sc-val">'+totalRuns+'</div><div class="sc-sub">'+promptsMentioned+' of '+pd.length+' prompts trigger a mention</div></div>'+
     '<div class="stat-card"><div class="sc-label"><span class="info-tip" data-tip="Highest AI visibility score (0-100) achieved across all prompts and models. Score reflects prominence and rank in the AI response">'+infoSvg+'</span>Best Score</div><div class="sc-val '+(bestScore>0?'good':'bad')+'">'+(bestScore>0?bestScore:'None')+'</div><div class="sc-sub">'+(bestScore===100?'Rank 1 by Perplexity':bestScore>0?'highest ranking':'not ranked by any model')+'</div></div>'+
-    '<div class="stat-card"><div class="sc-label"><span class="info-tip" data-tip="Total number of source URLs cited by AI models when answering prompts in this brand\'s topic area">'+infoSvg+'</span>Total Citations</div><div class="sc-val" style="color:var(--v)">'+citTotal.toLocaleString()+'</div><div class="sc-sub">'+c.uniqueDomains+' unique domains</div></div>'+
+    '<div class="stat-card"><div class="sc-label"><span class="info-tip" data-tip="Total number of source URLs cited by AI models when answering prompts in this brand\'s topic area">'+infoSvg+'</span>Total Citations</div><div class="sc-val" style="color:var(--v)">'+citTotal.toLocaleString()+'</div><div class="sc-sub">'+citUniq+' unique domains</div></div>'+
     '<div class="stat-card"><div class="sc-label"><span class="info-tip" data-tip="Share of brand mentions rated as positive sentiment out of all detected mentions">'+infoSvg+'</span>Sentiment Score</div><div class="sc-val '+(sentPct===null?'bad':sentCls)+'">'+(sentPct!==null?sentPct+'%':'N/A')+'</div><div class="sc-sub">'+(sentTotal>0?sentPos+' positive of '+sentTotal+' mentions':'no mentions detected')+'</div></div>'+
     '<div class="stat-card"><div class="sc-label"><span class="info-tip" data-tip="Mean rank position across all AI responses where the brand was mentioned. Lower is better (rank 1 = first recommended)">'+infoSvg+'</span>Avg Position</div><div class="sc-val '+(avgPos===null?'bad':posCls)+'">'+(avgPos!==null?'#'+avgPos:'N/A')+'</div><div class="sc-sub">'+(allRanks.length?'across '+allRanks.length+' ranked responses':'no ranked mentions')+'</div></div>';
 }
@@ -605,8 +607,10 @@ function applyPromptFilter(){
     var dots=MODEL_ORDER.map(function(mk){
       var mv=p.models[mk];var m=MODEL_META[mk]||{domain:'google.com',label:mk};
       var hit=mv&&mv.mentioned;
+      var isActive=activeModel!=='all'&&activeModel===mk;
       var tip=m.label+': '+(hit?'Mentioned (score '+(mv.score||0)+', rank '+(mv.rank||'none')+')':'Not mentioned');
-      return '<div class="mdot-wrap" data-tip="'+tip+'"><img class="mdot-img'+(hit?'':' mdot-miss')+'" src="'+fav(m.domain)+'" onerror="this.src=\'data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==\'"></div>';
+      var extraStyle=isActive?'outline:2px solid var(--v);outline-offset:1px;border-radius:4px;':'';
+      return '<div class="mdot-wrap" data-tip="'+tip+'"><img class="mdot-img'+(hit?'':' mdot-miss')+'" src="'+fav(m.domain)+'" style="'+extraStyle+'" onerror="this.src=\'data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==\'"></div>';
     }).join('');
     return '<tr><td><div class="pt-text">'+p.text+'</div></td><td>'+visBadge+'</td><td>'+posBadge+'</td><td>'+sentBadge+'</td><td><div class="model-dots">'+dots+'</div></td></tr>';
   }).join('');
@@ -615,7 +619,9 @@ function applyPromptFilter(){
 function renderSentiment(){
   var bk=BRAND_CFG[currentBrand].key,s=D.sentiment[bk];
   var mentions=activeModel==='all'?s.mentions:s.mentions.filter(function(m){return m.model===activeModel;});
-  var tiles=[{cls:'spos',num:s.positive,lbl:'Positive'},{cls:'sneu',num:s.neutral,lbl:'Neutral'},{cls:'sneg',num:s.negative,lbl:'Negative'},{cls:'sunc',num:s.uncertain,lbl:'Uncertain'}].map(function(t){return '<div class="sent-tile '+t.cls+'"><div class="st-num">'+t.num+'</div><div class="st-lbl">'+t.lbl+'</div></div>';}).join('');
+  var tileCounts={positive:0,neutral:0,negative:0,uncertain:0};
+  mentions.forEach(function(m){if(tileCounts.hasOwnProperty(m.sentiment))tileCounts[m.sentiment]++;});
+  var tiles=[{cls:'spos',num:tileCounts.positive,lbl:'Positive'},{cls:'sneu',num:tileCounts.neutral,lbl:'Neutral'},{cls:'sneg',num:tileCounts.negative,lbl:'Negative'},{cls:'sunc',num:tileCounts.uncertain,lbl:'Uncertain'}].map(function(t){return '<div class="sent-tile '+t.cls+'"><div class="st-num">'+t.num+'</div><div class="st-lbl">'+t.lbl+'</div></div>';}).join('');
   var el=document.getElementById('sentContent');
   if(s.total_mentions===0){el.innerHTML='<div class="sent-tiles">'+tiles+'</div><div class="cc"><div class="cc-body"><div class="no-data"><div class="no-data-icon">&#128202;</div><h3>No mentions detected</h3><p>'+BRAND_CFG[currentBrand].name+' was not mentioned in any of the 30 tracked prompts across 5 AI models. See the Actions tab for steps to achieve first mentions.</p></div></div></div>';return;}
   if(!mentions.length){el.innerHTML='<div class="sent-tiles">'+tiles+'</div><div class="cc"><div class="cc-body"><div class="no-data"><div class="no-data-icon">&#128269;</div><h3>No mentions for '+(MODEL_META[activeModel]||{label:activeModel}).label+'</h3><p>Switch to "All models" or try Sonar.</p></div></div></div>';return;}
@@ -642,8 +648,9 @@ function renderCompetitors(){
   }).join('')||'<p style="color:var(--ink4);font-size:13px">No competitors for this filter.</p>';
   document.getElementById('compSub').textContent=comps.length+' competitors detected'+(activeModel!=='all'?' for '+(MODEL_META[activeModel]||{label:activeModel}).label:'');
   var top3=comps.slice(0,3);
+  function _cDisp(c){return activeModel!=='all'&&c.modelMentions&&c.modelMentions[activeModel]!=null?c.modelMentions[activeModel]:c.mentions;}
   document.getElementById('compInsight').innerHTML=top3.length?
-    '<div style="margin-bottom:14px"><div class="act-sect-label">Dominant competitors</div><p style="font-size:13px;color:var(--ink2);line-height:1.7;margin-top:6px"><b>'+top3[0].name+'</b> leads with '+top3[0].mentions+' AI mentions at an average score of '+top3[0].avgScore+'.'+(top3[1]?' '+top3[1].name+' ('+top3[1].mentions+' mentions) and '+(top3[2]?top3[2].name+' ('+top3[2].mentions+')':'')+'follow.':'')+'</p></div><div><div class="act-sect-label">By sentiment</div><div style="margin-top:8px;display:flex;flex-direction:column;gap:7px">'+comps.slice(0,7).map(function(c){var cd=COMP_DOMAINS[c.name]||(c.name.toLowerCase().replace(/\s/g,'')+'.com');var col=c.topSentiment==='positive'?'#16a34a':c.topSentiment==='negative'?'#dc2626':'#64748b';return '<div style="display:flex;align-items:center;gap:8px;font-size:12px"><img src="'+fav(cd)+'" style="width:14px;height:14px;border-radius:3px;border:1px solid var(--border)" onerror="this.style.display=\'none\'"><span style="flex:1;color:var(--ink)">'+c.name+'</span><span style="color:'+col+';font-weight:600;font-size:11px">'+c.topSentiment+'</span><span style="color:var(--ink4)">avg '+c.avgScore+'</span></div>';}).join('')+'</div></div>':
+    '<div style="margin-bottom:14px"><div class="act-sect-label">Dominant competitors</div><p style="font-size:13px;color:var(--ink2);line-height:1.7;margin-top:6px"><b>'+top3[0].name+'</b> leads with '+_cDisp(top3[0])+' AI mentions at an average score of '+top3[0].avgScore+'.'+(top3[1]?' '+top3[1].name+' ('+_cDisp(top3[1])+' mentions) and '+(top3[2]?top3[2].name+' ('+_cDisp(top3[2])+')':'')+'follow.':'')+'</p></div><div><div class="act-sect-label">By sentiment</div><div style="margin-top:8px;display:flex;flex-direction:column;gap:7px">'+comps.slice(0,7).map(function(c){var cd=COMP_DOMAINS[c.name]||(c.name.toLowerCase().replace(/\s/g,'')+'.com');var col=c.topSentiment==='positive'?'#16a34a':c.topSentiment==='negative'?'#dc2626':'#64748b';return '<div style="display:flex;align-items:center;gap:8px;font-size:12px"><img src="'+fav(cd)+'" style="width:14px;height:14px;border-radius:3px;border:1px solid var(--border)" onerror="this.style.display=\'none\'"><span style="flex:1;color:var(--ink)">'+c.name+'</span><span style="color:'+col+';font-weight:600;font-size:11px">'+c.topSentiment+'</span><span style="color:var(--ink4)">avg '+c.avgScore+'</span></div>';}).join('')+'</div></div>':
     '<p style="color:var(--ink4);font-size:13px">No data for this filter.</p>';
 }
 /* citations */

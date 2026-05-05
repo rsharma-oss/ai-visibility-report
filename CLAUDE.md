@@ -207,6 +207,85 @@ Each of these three card sub-labels must also show the active model name when a 
 
 `renderCitations()` already uses this pattern correctly. When editing `renderOverview()`, make sure all three citation chart sections follow the same wiring. If you add a new per-model data field (e.g. top listicles per model), apply the same `(mc&&mc.field)||cit.field` fallback pattern.
 
+---
+
+## Model filter completeness checklist
+
+This section documents exactly what data source every render function uses when a model filter is active (`activeModel !== 'all'`). Use it to verify correctness after any template edit and to prevent regressions.
+
+### `renderStats()` — 6 stat cards
+
+| Stat card | Filtered data source | Notes |
+|---|---|---|
+| AI Visibility % | `p.models[activeModel].mentioned` per prompt | `mentioned / totalRuns * 100`; `totalRuns` counts 1 per prompt when filtered |
+| Model Runs | 1 per prompt (not `p.totalRuns`) | Counts prompts that have data for `activeModel` |
+| Best Score | `p.models[activeModel].score` | Max across all prompts |
+| Total Citations | `D.modelCitations[bk][activeModel].total` via `mc_s` | Falls back to `c.total` when `activeModel==='all'` |
+| Unique Domains sub-text | `mc_s.topDomains.length` via `citUniq` | Falls back to `c.uniqueDomains`; fixed 2026-05 (was always global) |
+| Sentiment Score % | `s.mentions.filter(m => m.model===activeModel)` | `sentPos / sentTotal * 100` |
+| Avg Position | `p.models[activeModel].rank` per prompt | Only ranks from the active model |
+
+### `renderPrompts()` — prompts table
+
+| Column | Filtered data source | Notes |
+|---|---|---|
+| Visibility badge | `p.models[activeModel].mentioned` | Shows 100%/0% when model-filtered |
+| Avg Position | `p.models[activeModel].rank` | Shows single rank, not average |
+| Sentiment | `p.models[activeModel].sentiment` + `.score` | Shows per-model sentiment chip |
+| Score (in sentiment cell) | `p.models[activeModel].score` | Shown as sub-label next to chip |
+| Model dots | All models rendered; active model outlined in `--v` | Outline added 2026-05 for visual emphasis |
+| Sort: visibility | `p.models[activeModel].mentioned ? 1 : 0` | Binary sort when filtered |
+| Sort: position | `p.models[activeModel].rank || 999` | Per-model rank |
+| Sort: sentiment | `sentWeight(p.models[activeModel].sentiment)` | Per-model sentiment weight |
+
+### `renderSentiment()` — sentiment tab
+
+| Element | Filtered data source | Notes |
+|---|---|---|
+| Tiles (Positive/Neutral/Negative/Uncertain) | `tileCounts` computed from filtered `mentions` | Fixed 2026-05; was using global `s.positive` etc. |
+| Mention cards list | `mentions` filtered by `m.model===activeModel` | Already correct before 2026-05 audit |
+| Card count sub-label | `mentions.length` (filtered) | Reflects filtered count |
+
+### `renderCompetitors()` — competitors tab
+
+| Element | Filtered data source | Notes |
+|---|---|---|
+| Competitor list | `comps.filter(c => c.models.indexOf(activeModel) > -1)` | Removes competitors with no data for active model |
+| Bar width `pct` | `c.modelMentions[activeModel]` via `dispCount` | Falls back to `c.mentions` |
+| Mention count label | `dispCount` (per-model) | Not `c.mentions` |
+| Bar scale `max` | `Math.max` of per-model `dispCount` values | Correct relative scaling |
+| Insight panel — dominant text | `_cDisp(c)` = `c.modelMentions[activeModel]` | Fixed 2026-05; was using `c.mentions` (global) |
+| Insight panel — sentiment list | `c.topSentiment`, `c.avgScore` (global) | Sentiment/avgScore not broken down per-model in data |
+
+### `renderCitations()` — citations tab
+
+| Element | Filtered data source | Notes |
+|---|---|---|
+| `c` object | `D.modelCitations[bk][activeModel]` when filtered | Falls back to `D.citations[bk]`; `uniqueDomains` patched to `topDomains.length` |
+| Page Type bars | `c.domainTypes` (from model-filtered `c`) | Correct |
+| Content Type bars | `c.contentTypes` (from model-filtered `c`) | Correct |
+| Top 20 domains list | `c.topDomains` (from model-filtered `c`) | Correct |
+| Domain URL expansion | `DURL[bk][domain].filter(u => u.models.indexOf(activeModel) > -1)` | Filters URLs by model |
+| Citation count in URL row | `u.mc[activeModel]` via `displayCount` | Per-model citation count per URL |
+| Top Listicles | Always global `D.citations[bk].topListicles` | Not broken down per-model in data structure |
+
+### `renderOverview()` — overview tab
+
+| Element | Filtered data source | Notes |
+|---|---|---|
+| Model Coverage bars | Always per-model (iterates all models) | Not affected by `activeModel` filter |
+| Competitor Mentions bars | `c.modelMentions[activeModel]` via `dispCount` | Falls back to `c.mentions` |
+| Sentiment Breakdown donut | `sentCounts` from filtered `sMentions` | `s.mentions.filter(m => m.model===activeModel)` |
+| Content Type donut | `mc.contentTypes` via `(mc&&mc.contentTypes)||cit.contentTypes` | `mc = D.modelCitations[bk][activeModel]` |
+| Page Type donut | `mc.domainTypes` via `(mc&&mc.domainTypes)||cit.domainTypes` | Same `mc` pattern |
+| Top Cited Domains bars | `mc.topDomains` via `(mc&&mc.topDomains)||cit.topDomains` | Same `mc` pattern |
+
+### `renderActionsGrid()` — actions tab
+
+Actions are static per brand (generated at build time by LLM). They do not respond to the model filter — this is intentional, as actions are strategic recommendations for the overall brand, not per-model.
+
+---
+
 ### Header HTML (when injecting into template)
 - Brand toggle button: must use the brand's own domain for the Google favicon (`https://www.google.com/s2/favicons?domain={brand_domain}&sz=32`), not any template brand domain.
 - Report date in `.h-meta`: must match the actual month/year the report was generated.
