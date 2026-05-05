@@ -1068,6 +1068,25 @@ function toggleDomRow(id,domain,bk){
   }
 }
 var activeCitComp='all';
+var _compCitsByDomain={};
+function buildCompUrlList(domain){
+  var urls=_compCitsByDomain[domain]||[];
+  if(!urls.length)return '<table class="dom-url-table"><tbody><tr><td colspan="5" style="color:var(--ink4);padding:14px;text-align:center">No URLs available.</td></tr></tbody></table>';
+  var rows=urls.map(function(u){
+    var mchips=(u.models||[]).map(function(m){var mm=MODEL_META[m]||{domain:'google.com',label:m};return '<span class="mdot-wrap" data-tip="'+mm.label+'"><img class="dom-url-td-mimg" src="'+fav(mm.domain)+'" onerror="this.style.display=\'none\'"></span>';}).join('');
+    var pt=u.pageType?u.pageType.replace(/_/g,' ').replace(/\b\w/g,function(x){return x.toUpperCase();}):'<span style="color:var(--ink4)">—</span>';
+    var ct=u.contentType?u.contentType.replace(/_/g,' ').replace(/\b\w/g,function(x){return x.toUpperCase();}):'<span style="color:var(--ink4)">—</span>';
+    var ptBadge=u.pageType?'<span class="type-badge">'+pt+'</span>':pt;
+    var ctBadge=u.contentType?'<span class="type-badge">'+ct+'</span>':ct;
+    return '<tr><td class="dom-url-td-title"><a href="'+u.url+'" target="_blank" rel="noopener" title="'+u.url+'">'+u.title.slice(0,68)+'</a></td><td class="dom-url-td-cnt tc">'+u.count+'×</td><td class="tc">'+ptBadge+'</td><td class="tc">'+ctBadge+'</td><td class="tc"><div class="dom-url-td-models">'+mchips+'</div></td></tr>';
+  }).join('');
+  return '<table class="dom-url-table"><thead><tr><th>URL / Title</th><th class="tc">Cited</th><th class="tc">Page Type</th><th class="tc">Content Type</th><th class="tc">AI Models</th></tr></thead><tbody>'+rows+'</tbody></table>';
+}
+function toggleCompDomRow(id,domain){
+  var panel=document.getElementById(id);var tr=document.getElementById('tr-'+id);
+  if(panel.classList.contains('open')){panel.classList.remove('open');if(tr)tr.classList.remove('dom-row-open');}
+  else{panel.innerHTML=buildCompUrlList(domain);panel.classList.add('open');if(tr)tr.classList.add('dom-row-open');}
+}
 function _buildCompCits(bk){
   var rh=RAW_HISTORY[bk];if(!rh)return{};
   // First pass: collect all citations per normalized comp key
@@ -1143,10 +1162,20 @@ function renderCitations(){
     var ctBars=ctSorted.slice(0,10).map(function(ct){var p=(ct.count/tct*100).toFixed(1);var l=ct.type.replace(/_/g,' ').replace(/\b\w/g,function(ch){return ch.toUpperCase();});return '<div class="bar-row"><div class="bar-label">'+l+'</div><div class="bar-track"><div class="bar-fill" style="width:'+p+'%"></div></div><div class="bar-pct">'+p+'%</div><div class="bar-cnt">'+ct.count+'</div></div>';}).join('')||'<p style="color:var(--ink4);font-size:13px;padding:12px">No data for this filter.</p>';
     var compTopDomains=Object.keys(domainCounts).map(function(d){return{domain:d,count:domainCounts[d]};}).sort(function(a,b){return b.count-a.count;}).slice(0,20);
     var totalComp=compUrls.reduce(function(s,cu){return s+cu.count;},0);
+    /* build per-domain URL lookup for expandable rows */
+    _compCitsByDomain={};
+    compUrls.forEach(function(cu){if(!_compCitsByDomain[cu.domain])_compCitsByDomain[cu.domain]=[];_compCitsByDomain[cu.domain].push(cu);});
+    Object.keys(_compCitsByDomain).forEach(function(d){_compCitsByDomain[d].sort(function(a,b){return b.count-a.count;});});
     var chevSvg2='<svg class="dom-chev" viewBox="0 0 10 6" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M1 1l4 4 4-4"/></svg>';
     var domRows=compTopDomains.map(function(d,i){
       var t=typeof DCAT!=='undefined'&&DCAT&&DCAT[d.domain]?DCAT[d.domain]:'AI/SaaS Blog';
-      return '<tr><td style="color:var(--ink4);font-size:12px;width:24px">'+(i+1)+'</td><td style="display:flex;align-items:center"><img class="dom-fav" src="'+fav(d.domain)+'" onerror="this.style.display=\'none\'" style="margin-right:5px"><b>'+d.domain+'</b></td><td><span class="type-badge">'+t+'</span></td><td style="text-align:right;font-weight:600;color:var(--v)">'+d.count+'</td></tr>';
+      var panelId='cdp-'+currentBrand+'-'+i;
+      var hasUrls=(_compCitsByDomain[d.domain]||[]).length>0;
+      var domCell=hasUrls
+        ?'<td onclick="toggleCompDomRow(\''+panelId+'\',\''+d.domain+'\')" class="dom-row-clickable" style="display:flex;align-items:center">'+chevSvg2+'<img class="dom-fav" src="'+fav(d.domain)+'" onerror="this.style.display=\'none\'" style="margin-right:5px"><b>'+d.domain+'</b></td>'
+        :'<td style="display:flex;align-items:center"><img class="dom-fav" src="'+fav(d.domain)+'" onerror="this.style.display=\'none\'" style="margin-right:5px"><b>'+d.domain+'</b></td>';
+      return '<tr id="tr-'+panelId+'"><td style="color:var(--ink4);font-size:12px;width:24px">'+(i+1)+'</td>'+domCell+'<td><span class="type-badge">'+t+'</span></td><td style="text-align:right;font-weight:600;color:var(--v)">'+d.count+'</td></tr>'+
+        '<tr class="dom-expand-row"><td colspan="4"><div class="dom-url-panel" id="'+panelId+'"></div></td></tr>';
     }).join('');
     document.getElementById('citContent').innerHTML=
       filterBar+
