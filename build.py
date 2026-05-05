@@ -70,32 +70,6 @@ def call_llm(provider, api_key, model, system_prompt, user_prompt, base_url=None
         result = subprocess.run(cmd, input=full_prompt, capture_output=True, text=True, check=True)
         return result.stdout.strip()
 
-    # Try native anthropic SDK first for "anthropic" provider (avoids OpenAI compat layer issues)
-    if provider == "anthropic":
-        try:
-            import anthropic as _anthropic
-            _client = _anthropic.Anthropic(api_key=api_key)
-            _model = model or "claude-sonnet-4-6"
-            for attempt in range(3):
-                try:
-                    _resp = _client.messages.create(
-                        model=_model,
-                        max_tokens=4096,
-                        system=system_prompt,
-                        messages=[{"role": "user", "content": user_prompt}],
-                    )
-                    return _resp.content[0].text.strip()
-                except Exception as e:
-                    if "rate_limit" in str(e).lower() or "429" in str(e):
-                        wait = 30 * (attempt + 1)
-                        print(f"  Rate limit hit, waiting {wait}s before retry {attempt+1}/3...")
-                        time.sleep(wait)
-                    else:
-                        raise
-            raise RuntimeError("LLM call failed after 3 retries")
-        except ImportError:
-            pass  # fall through to openai compat
-
     try:
         from openai import OpenAI
     except ImportError:
@@ -107,25 +81,15 @@ def call_llm(provider, api_key, model, system_prompt, user_prompt, base_url=None
     extra_headers = pconf.get("extra_headers", {})
 
     client = OpenAI(api_key=api_key, base_url=resolved_url, default_headers=extra_headers)
-    for attempt in range(3):
-        try:
-            response = client.chat.completions.create(
-                model=model,
-                max_tokens=4096,
-                messages=[
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": user_prompt},
-                ],
-            )
-            return response.choices[0].message.content.strip()
-        except Exception as e:
-            if "rate_limit" in str(e).lower() or "429" in str(e):
-                wait = 30 * (attempt + 1)
-                print(f"  Rate limit hit, waiting {wait}s before retry {attempt+1}/3...")
-                time.sleep(wait)
-            else:
-                raise
-    raise RuntimeError("LLM call failed after 3 retries")
+    response = client.chat.completions.create(
+        model=model,
+        max_tokens=4096,
+        messages=[
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": user_prompt},
+        ],
+    )
+    return response.choices[0].message.content.strip()
 
 
 # ─── Config ──────────────────────────────────────────────────────────────────
@@ -198,7 +162,7 @@ def fetch_prompt_detail(api_key, brand_id, prompt_id):
     """Fetch full prompt detail including history with sources and entities."""
     time.sleep(3)  # 20 req/min = 3s between calls
     return api_get(api_key, f"/brands/{brand_id}/prompts/{prompt_id}",
-                   params={"include_full_response": "true"})
+                   params={"include_full_response": "true", "time_range": "30d"})
 
 
 # ─── Classification helpers ───────────────────────────────────────────────────
@@ -235,49 +199,36 @@ def classify_url(url, domain, title=""):
     url_lower = url.lower()
 
     # domain_type
-    if any(d in domain for d in ["instagram.com", "tiktok.com", "twitter.com", "x.com", "facebook.com", "reddit.com", "quora.com", "forocoches.com"]):
+    if any(d in domain for d in ["reddit.com", "quora.com", "twitter.com", "linkedin.com"]):
         domain_type = "social_media"
     elif any(d in domain for d in ["youtube.com", "vimeo.com"]):
         domain_type = "video"
+    elif any(seg in path for seg in ["/blog/", "/articles/", "/post/", "/posts/"]):
+        domain_type = "blog_article"
     elif any(seg in path for seg in ["/docs/", "/help/", "/support/"]):
         domain_type = "documentation"
     elif any(seg in path for seg in ["/pricing", "/plans"]):
         domain_type = "product_page"
-    elif any(seg in path for seg in ["/product/", "/products/", "/tienda/", "/shop/", "/comprar/", "/collections/"]):
-        domain_type = "product_page"
-    elif path.count("/") <= 1 or (path.count("/") == 2 and path.endswith("/")):
+    elif path.count("/") <= 2:
         domain_type = "homepage"
     else:
-        domain_type = "article_page"
+        domain_type = "blog_article"
 
-    # content_type — Spanish + English patterns
-    listicle_patterns = [
-        r'las?\s+\d+\s+mejores?', r'los?\s+\d+\s+mejores?', r'top\s+\d+',
-        r'\d+\s+best', r'best\s+\d+', r'\bbest\b.{0,30}\b(supplement|protein|brand|product)',
-        r'\btop\b.{0,30}\b(supplement|protein|brand|product)',
-        r'/top-', r'/best-', r'/mejores?-', r'ranking', r'comparativa',
-        r'mejores?\s+(suplementos?|proteinas?|marcas?|productos?)',
-    ]
-    comparison_patterns = [r'\bvs\b', r'\bversus\b', r'comparison', r'comparar', r'diferencia\s+entre', r'cual\s+es\s+mejor', r'alternative']
-    howto_patterns = [r'\bc[oó]mo\b', r'\bhow\s+to\b', r'\bgu[ií]a\b', r'\bguide\b', r'\btutorial\b', r'qu[eé]\s+es\b', r'cu[aá]ndo\b']
-
-    combined = title + " " + url_lower
-    if any(re.search(p, combined) for p in listicle_patterns):
-        content_type = "listicle_roundup"
-    elif any(re.search(p, combined) for p in comparison_patterns):
+    # content_type
+    if any(kw in title or kw in url_lower for kw in ["vs ", " versus", "comparison", "alternative"]):
         content_type = "comparison"
-    elif any(re.search(p, combined) for p in howto_patterns):
+    elif any(kw in title or kw in url_lower for kw in ["how to", "guide", "tutorial"]):
         content_type = "how_to_guide"
+    elif any(kw in title or kw in url_lower for kw in ["best ", "top ", " tools", " apps"]):
+        content_type = "listicle_roundup"
     elif domain_type == "social_media":
-        content_type = "social_media" if any(d in domain for d in ["instagram.com", "tiktok.com", "twitter.com", "x.com", "facebook.com"]) else "forum_thread"
+        content_type = "forum_thread"
     elif domain_type == "video":
         content_type = "video"
     elif domain_type == "product_page":
         content_type = "product_page"
-    elif domain_type == "homepage":
-        content_type = "brand_homepage"
     else:
-        content_type = "article"
+        content_type = "blog_article"
 
     return domain_type, content_type
 
@@ -291,6 +242,16 @@ def extract_domain(url):
         return domain
     except Exception:
         return url
+
+
+def normalize_comp_name(name):
+    """Normalize competitor display name for deduplication (e.g. 'Otterly AI' == 'otterly.ai')."""
+    n = name.strip().lower()
+    n = re.sub(r'\.(ai|com|io|co|org|net|app)$', '', n)
+    n = re.sub(r'\s+ai$', '', n)
+    n = re.sub(r'ai$', '', n)  # handles "OtterlyAI" → "Otterly"
+    n = re.sub(r'\s+(digital|agency|media|platform|labs?|technologies?|solutions?)$', '', n)
+    return re.sub(r'[\s\-]', '', n)
 
 
 def comp_domain_from_name(name):
@@ -358,8 +319,7 @@ def process_brand_data(api_key, brand_cfg):
     all_citations = []  # (url, title, model_key)
     all_entities = []   # (name, entity_type, model_key)
     sentiment_mentions = []
-    total_runs_analyzed = 0          # count of individual AI model runs processed
-    brand_model_mention_counts = defaultdict(int)  # model_key -> runs where brand mentioned
+    raw_prompt_history = []  # for time-range filtering in the frontend
 
     for p in prompts_raw:
         prompt_id = p.get("id") or p.get("promptId")
@@ -376,16 +336,12 @@ def process_brand_data(api_key, brand_cfg):
         models_data = {}
         scores = []
         mentions_count = 0
-        prompt_comp_all = defaultdict(int)
-        prompt_comp_by_model = defaultdict(lambda: defaultdict(int))
+        raw_entries = []  # per-entry raw data for this prompt
 
         for entry in history:
             model_key = entry.get("aiModel") or entry.get("model", "unknown")
             mentioned = entry.get("mentioned", False)
             score = entry.get("score", 0) or 0
-            total_runs_analyzed += 1
-            if mentioned:
-                brand_model_mention_counts[model_key] += 1
             rank = entry.get("rank")
             sentiment = entry.get("sentiment")
             if sentiment:
@@ -394,28 +350,11 @@ def process_brand_data(api_key, brand_cfg):
                     sentiment = "neutral"
 
             response_text = (
+                entry.get("response") or
                 entry.get("fullResponse") or
-                entry.get("responseSnippet") or
                 entry.get("responseText") or ""
             )
             snippet = response_text[:300] if response_text else ""
-
-            # Collect competitors mentioned in this same response entry
-            entry_comps = []
-            for ent in (entry.get("brandMentions") or entry.get("entities") or []):
-                ent_type = (ent.get("type") or ent.get("entityType") or "").lower()
-                if ent_type in ("competitor", "untracked"):
-                    ent_name = ent.get("entityName") or ent.get("name", "")
-                    if ent_name and ent_name.lower() != brand_name.lower():
-                        entry_comps.append({
-                            "name": ent_name,
-                            "rank": ent.get("rank"),
-                            "score": ent.get("score"),
-                        })
-            for ec in entry_comps:
-                if ec.get("name"):
-                    prompt_comp_all[ec["name"]] += 1
-                    prompt_comp_by_model[model_key][ec["name"]] += 1
 
             models_data[model_key] = {
                 "mentioned": mentioned,
@@ -423,7 +362,6 @@ def process_brand_data(api_key, brand_cfg):
                 "rank": rank,
                 "sentiment": sentiment,
                 "snippet": snippet,
-                "competitors": entry_comps[:8],
             }
 
             if mentioned:
@@ -459,12 +397,11 @@ def process_brand_data(api_key, brand_cfg):
                 entry.get("sources") or
                 entry.get("citedSources") or []
             )
-            _entry_comp_names = [c["name"] for c in entry_comps if c.get("name")]
             for src in sources:
                 url = src.get("url", "")
                 title = src.get("title") or urlparse(url).path or url
                 if url:
-                    all_citations.append((url, title, model_key, _entry_comp_names))
+                    all_citations.append((url, title, model_key))
 
             for ent in (entry.get("brandMentions") or entry.get("entities") or []):
                 ent_type = (ent.get("type") or ent.get("entityType") or "").lower()
@@ -512,12 +449,57 @@ def process_brand_data(api_key, brand_cfg):
                         seen_in_entry.add(lower_name)
                         all_entities.append((raw_name, "competitor", model_key))
 
+            # ── Raw entry for frontend time-range filtering ───────────────
+            entry_date = entry.get("date", "")
+            raw_comps = [
+                bm.get("entityName") or bm.get("name", "")
+                for bm in (entry.get("brandMentions") or [])
+                if (bm.get("type") or "").lower() in ("competitor", "untracked")
+                and (bm.get("entityName") or bm.get("name", ""))
+            ]
+            raw_entry_reason = ""
+            raw_entry_context = ""
+            if mentioned:
+                raw_entry_reason = next(
+                    (b.get("mentionSummary", "") for b in (entry.get("brandMentions") or [])
+                     if (b.get("entityName") or "").lower() == brand_name.lower()),
+                    entry.get("mentionSummary", "") or ""
+                )[:400]
+                raw_entry_context = _brand_context(
+                    entry.get("fullResponse") or entry.get("response") or "", brand_name, 600
+                ) or (entry.get("responseSnippet") or "")[:400]
+            raw_srcs = []
+            for src in (entry.get("sources") or entry.get("citedSources") or []):
+                src_url = src.get("url", "")
+                if not src_url:
+                    continue
+                src_title = src.get("title") or src_url
+                src_domain = extract_domain(src_url)
+                src_dt, src_ct = classify_url(src_url, src_domain, src_title)
+                raw_srcs.append({
+                    "u": src_url, "t": src_title[:100], "pt": src_dt, "ct": src_ct
+                })
+            raw_entries.append({
+                "date": entry_date,
+                "model": model_key,
+                "hit": mentioned,
+                "sc": score,
+                "rk": rank,
+                "snt": sentiment,
+                "rsn": raw_entry_reason,
+                "ctx": raw_entry_context,
+                "srcs": raw_srcs,
+                "comps": raw_comps,
+            })
+
         avg_score = round(sum(scores) / len(scores), 2) if scores else 0.0
         best_score = max(scores) if scores else 0
 
-        _pc = {"all": sorted([{"name": k, "count": v} for k, v in prompt_comp_all.items()], key=lambda x: -x["count"])[:6]}
-        for _mk, _cnt in prompt_comp_by_model.items():
-            _pc[_mk] = sorted([{"name": k, "count": v} for k, v in _cnt.items()], key=lambda x: -x["count"])[:6]
+        raw_prompt_history.append({
+            "id": prompt_id,
+            "text": prompt_text,
+            "entries": raw_entries,
+        })
 
         prompts_out.append({
             "id": prompt_id,
@@ -527,18 +509,11 @@ def process_brand_data(api_key, brand_cfg):
             "mentions": mentions_count,
             "totalRuns": len(history),
             "models": models_data,
-            "_comps": _pc,
         })
-
-    # ── PROMPT_COMPS ─────────────────────────────────────────────────────────
-    prompt_comps_out = {}
-    for _p in prompts_out:
-        _pid = _p["id"]
-        prompt_comps_out[_pid] = _p.pop("_comps", {"all": []})
 
     # ── Citations aggregation ─────────────────────────────────────────────────
     url_data = {}
-    for url, title, model_key, _ in all_citations:
+    for url, title, model_key in all_citations:
         if url not in url_data:
             url_data[url] = {"title": title, "count": 0, "models": set(), "mc": defaultdict(int)}
         url_data[url]["count"] += 1
@@ -599,69 +574,26 @@ def process_brand_data(api_key, brand_cfg):
         durl_brand[domain] = urls_sorted
 
     # ── Competitors aggregation ──────────────────────────────────────────────
-    INGREDIENT_STOPWORDS = {
-        "proteina", "proteína", "creatina", "cafeina", "cafeína", "vitamina",
-        "omega", "colágeno", "colageno", "aminoácidos", "aminoacidos", "bcaa",
-        "glutamina", "zinc", "magnesio", "hierro", "calcio", "fibra", "azúcar",
-        "azucar", "sodio", "potasio", "fosforo", "fósforo", "carbohidrato",
-        "protein", "creatine", "caffeine", "collagen", "vitamin", "fiber",
-        "glucose", "fructose", "sucrose", "sodium", "calcium", "iron",
-    }
-
-    # Case-insensitive accumulation
-    comp_data_lower = defaultdict(lambda: {
-        "canonical": "", "mentions": 0, "models": set(), "model_counts": defaultdict(int)
-    })
+    comp_data = defaultdict(lambda: {"mentions": 0, "scores": [], "models": set(), "sentiments": []})
     for name, etype, model_key in all_entities:
         if not name:
             continue
-        key = name.lower()
-        info = comp_data_lower[key]
-        # Keep the longest/most-capitalised form as canonical
-        if len(name) > len(info["canonical"]):
-            info["canonical"] = name
-        info["mentions"] += 1
-        info["models"].add(model_key)
-        info["model_counts"][model_key] += 1
+        comp_data[name]["mentions"] += 1
+        comp_data[name]["models"].add(model_key)
 
     competitors_out = []
-    for key, info in comp_data_lower.items():
-        # Filter: min 3 mentions, min 3 chars, not an ingredient, not a number
-        if info["mentions"] < 3:
-            continue
-        if len(key) < 3:
-            continue
-        if key in INGREDIENT_STOPWORDS:
-            continue
-        if key.replace(".", "").replace(",", "").isdigit():
-            continue
-        avg_score = round(info["mentions"] / max(total_runs_analyzed, 1) * 100, 1)
+    for name, info in comp_data.items():
+        sents = info["sentiments"]
+        top_sent = max(set(sents), key=sents.count) if sents else "neutral"
         competitors_out.append({
-            "name": info["canonical"],
+            "name": name,
             "mentions": info["mentions"],
-            "modelMentions": dict(info["model_counts"]),
-            "avgScore": avg_score,
-            "topSentiment": "neutral",
+            "avgScore": 0,
+            "topSentiment": top_sent,
             "models": sorted(info["models"]),
             "summaries": [],
         })
     competitors_out.sort(key=lambda x: -x["mentions"])
-    competitors_out = competitors_out[:100]  # cap at 100
-
-    # Prepend the tracked brand itself as position-0 reference row
-    brand_total_mentions = sum(brand_model_mention_counts.values())
-    brand_avg_score = round(brand_total_mentions / max(total_runs_analyzed, 1) * 100, 1)
-    brand_entry = {
-        "name": brand_name,
-        "mentions": brand_total_mentions,
-        "modelMentions": dict(brand_model_mention_counts),
-        "avgScore": brand_avg_score,
-        "topSentiment": "positive",
-        "models": sorted(brand_model_mention_counts.keys()),
-        "summaries": [],
-        "isBrand": True,
-    }
-    competitors_out.insert(0, brand_entry)
 
     comp_domains = {c["name"]: comp_domain_from_name(c["name"]) for c in competitors_out}
 
@@ -684,7 +616,7 @@ def process_brand_data(api_key, brand_cfg):
         "domain_types": defaultdict(int),
         "content_types": defaultdict(int),
     })
-    for url, title, model_key, _ in all_citations:
+    for url, title, model_key in all_citations:
         domain = extract_domain(url)
         dt, ct = classify_url(url, domain, title)
         model_cit[model_key]["total"] += 1
@@ -709,51 +641,43 @@ def process_brand_data(api_key, brand_cfg):
             ),
         }
 
-    # ── COMP_CITS: competitor-citation co-occurrence mapping ─────────────────
-    _comp_cit_raw = defaultdict(lambda: defaultdict(lambda: {"count": 0, "models": set(), "title": ""}))
-    for _url, _title, _model_key, _comp_names in all_citations:
-        for _cname in _comp_names:
-            if _cname:
-                _comp_cit_raw[_cname][_url]["count"] += 1
-                _comp_cit_raw[_cname][_url]["models"].add(_model_key)
-                if not _comp_cit_raw[_cname][_url]["title"]:
-                    _comp_cit_raw[_cname][_url]["title"] = _title
-
-    def _is_real_brand(name):
-        if re.search(r'\d', name):
-            return False
-        for kw in ["impact whey", "evolate", "premium body"]:
-            if kw in name.lower():
-                return False
-        return True
-
-    _comp_cits_map = {}
-    for _cname, _url_info in _comp_cit_raw.items():
-        if not _is_real_brand(_cname):
+    # ── Competitor name deduplication ────────────────────────────────────────
+    norm_groups = defaultdict(list)
+    for name, etype, model_key in all_entities:
+        if not name:
             continue
-        if _cname.lower() in INGREDIENT_STOPWORDS:
-            continue
-        _url_list = sorted(
-            [
-                {
-                    "url": _url,
-                    "title": _info["title"].replace("—", " - ").replace("–", "-"),
-                    "domain": extract_domain(_url),
-                    "count": _info["count"],
-                    "models": sorted(_info["models"]),
-                    "pageType": classify_url(_url, extract_domain(_url), _info["title"])[0],
-                    "contentType": classify_url(_url, extract_domain(_url), _info["title"])[1],
-                }
-                for _url, _info in _url_info.items()
-            ],
-            key=lambda x: -x["count"],
-        )[:20]
-        if _url_list:
-            _comp_cits_map[_cname] = _url_list
+        norm = normalize_comp_name(name)
+        norm_groups[norm].append((name, etype, model_key))
 
-    comp_cits_out = dict(
-        sorted(_comp_cits_map.items(), key=lambda x: -sum(u["count"] for u in x[1]))[:20]
-    )
+    name_to_canonical = {}
+    for norm, entries in norm_groups.items():
+        name_counts = defaultdict(int)
+        for n, _, _ in entries:
+            name_counts[n] += 1
+        canonical = max(
+            name_counts.keys(),
+            key=lambda n: (
+                name_counts[n],
+                n[0].isupper() if n else False,
+                '.' not in n,
+                not n.lower().endswith('.ai'),
+                len(n),
+            ),
+        )
+        for n, _, _ in entries:
+            name_to_canonical[n] = canonical
+
+    all_entities = [(name_to_canonical.get(n, n), et, mk) for n, et, mk in all_entities]
+
+    # Apply canonical names to raw history and sentiment mention competitors
+    for rp in raw_prompt_history:
+        for re_entry in rp["entries"]:
+            re_entry["comps"] = [name_to_canonical.get(c, c) for c in re_entry["comps"]]
+
+    for sm in sentiment_mentions:
+        sm["competitors"] = [name_to_canonical.get(c, c) for c in sm["competitors"]]
+
+    all_run_dates = sorted({e["date"] for p in raw_prompt_history for e in p["entries"] if e.get("date")})
 
     return {
         "prompts": prompts_out,
@@ -764,8 +688,10 @@ def process_brand_data(api_key, brand_cfg):
         "durl": durl_brand,
         "dcat": dcat,
         "comp_domains": comp_domains,
-        "prompt_comps": prompt_comps_out,
-        "comp_cits": comp_cits_out,
+        "raw_history": {
+            "runDates": all_run_dates,
+            "prompts": raw_prompt_history,
+        },
     }
 
 
@@ -855,7 +781,7 @@ def generate_actions(cfg, brand_name, brand_domain, data):
     provider = cfg.get("llm_provider", "anthropic")
     api_key = cfg["llm_api_key"]
     pconf = PROVIDER_CONFIGS.get(provider, {})
-    model = cfg.get("llm_model") or pconf.get("default_model") if provider != "claude-cli" else cfg.get("llm_model")
+    model = cfg.get("llm_model") or pconf.get("default_model", "gpt-4o")
     base_url = cfg.get("llm_base_url")
 
     print(f"  Generating actions for {brand_name} (via {provider} / {model})...")
@@ -897,7 +823,7 @@ def js_obj_literal(py_obj):
 
 
 def inject_template(template_path, output_path, brands, D, DURL, DCAT, comp_domains,
-                    BRAND_CFG, ACTIONS, PROMPT_COMPS, COMP_CITS):
+                    BRAND_CFG, ACTIONS, RAW_HISTORY):
     with open(template_path, encoding="utf-8") as f:
         html = f.read()
 
@@ -910,8 +836,7 @@ def inject_template(template_path, output_path, brands, D, DURL, DCAT, comp_doma
         "%%BRAND_CFG%%": js_obj_literal(BRAND_CFG),
         "%%ACTIONS%%": js_obj_literal(ACTIONS),
         "%%DEFAULT_BRAND%%": brands[0]["key"],
-        "%%PROMPT_COMPS%%": js_obj_literal(PROMPT_COMPS),
-        "%%COMP_CITS%%": js_obj_literal(COMP_CITS),
+        "%%RAW_HISTORY%%": js_obj_literal(RAW_HISTORY),
     }
 
     for placeholder, value in replacements.items():
@@ -954,8 +879,7 @@ def main():
     comp_domains_all = {}
     BRAND_CFG = {}
     ACTIONS = {}
-    PROMPT_COMPS = {}
-    COMP_CITS = {}
+    RAW_HISTORY = {}
 
     for b in brands_cfg:
         brand_name = b["name"]
@@ -983,8 +907,7 @@ def main():
         }
 
         ACTIONS[brand_key] = generate_actions(cfg, brand_name, brand_domain, brand_data)
-        PROMPT_COMPS.update(brand_data["prompt_comps"])
-        COMP_CITS[brand_name] = brand_data["comp_cits"]
+        RAW_HISTORY[brand_key] = brand_data["raw_history"]
 
     print(f"\nWriting report to {output_file}...")
     inject_template(
@@ -997,8 +920,7 @@ def main():
         comp_domains_all,
         BRAND_CFG,
         ACTIONS,
-        PROMPT_COMPS,
-        COMP_CITS,
+        RAW_HISTORY,
     )
     print(f"Done! Open {output_file} in your browser.")
 

@@ -164,6 +164,145 @@ Every domain name, citation count, and competitor mentioned in the actions comes
 
 ---
 
+## Interactive filtering architecture
+
+The report is a fully client-side dashboard. Two global state variables drive all sections:
+
+```js
+let activeModel = 'all';        // 'all' | 'google-aio' | 'google-ai-mode' | 'gemini-2.5-flash' | 'sonar' | 'gpt-4o-mini'
+let currentTimeRange = 'all';   // 'all' | 'last-20' | 'last-14' | 'last-7' | 'last-run'
+```
+
+Every `render*()` function must respond to both. The pattern:
+1. `_applyTimeRange()` re-aggregates `D.prompts / citations / competitors / sentiment / modelCitations[bk]` from `RAW_HISTORY`
+2. Each `render*()` function applies `activeModel` inline, reading from the already-filtered `D`
+
+### RAW_HISTORY
+
+`build.py` injects `const RAW_HISTORY=%%RAW_HISTORY%%;` — per-brand, per-prompt, per-entry raw history. Structure:
+
+```js
+RAW_HISTORY = {
+  "peekaboo": {           // keyed by brand KEY (lowercase), NOT brand name
+    runDates: ["2026-04-10", ...],   // sorted asc
+    prompts: [{
+      id: "uuid",
+      text: "prompt text",
+      entries: [{
+        date: "2026-04-10",
+        model: "sonar",              // model key
+        hit: true,                   // brand mentioned?
+        sc: 85,                      // score 0-100
+        rk: 2,                       // rank
+        snt: "positive",             // sentiment
+        rsn: "reason text",
+        ctx: "surrounding context",
+        srcs: [{u, t, pt, ct}],      // url, title, pageType, contentType
+        comps: ["Peec AI", "Profound"]  // competitors in this response
+      }]
+    }]
+  }
+}
+```
+
+`_buildPromptComps(bk)` and `_buildCompCits(bk)` compute their results directly from `RAW_HISTORY`, applying date filtering in-place. Unlike Vitaldin (which had pre-computed `PROMPT_COMPS`/`COMP_CITS` injected from build.py), this report computes everything client-side.
+
+### CRITICAL: brand key naming distinction
+
+Two different casings coexist and must not be confused:
+
+| Variable | Value | Used as key in |
+|---|---|---|
+| `currentBrand` | `"peekaboo"` (lowercase) | `RAW_HISTORY`, `_compCitsCache` |
+| `BRAND_CFG[currentBrand].key` = `bk` | `"Peekaboo"` (capital P) | `D.prompts`, `D.competitors`, `D.citations`, `D.sentiment`, `D.modelCitations` |
+
+Calling `_getCompCits(bk)` or `RAW_HISTORY[bk]` with the capitalized key always returns `undefined`. Always pass `currentBrand` (lowercase) to functions that read RAW_HISTORY.
+
+---
+
+## Competitor deduplication
+
+Both build.py and template.html deduplicate competitors independently:
+
+**build.py** (`normalize_comp_name(name)`): strips domain TLDs, " AI" suffix — runs once at build time on all_entities and raw_history comps. Result stored in RAW_HISTORY.
+
+**JS** (`_normComp(name)`, `_dedupeComps(arr)`): client-side dedup for display lists. Run on `D.competitors[bk]` whenever competitors are rendered (competitor tab, citations dropdown, prompts icons).
+
+`_dedupeComps` groups by `_normComp` key, picks canonical name by highest `mentions` count, sums all mentions. Always call `_dedupeComps()` before rendering any competitor list.
+
+`_buildCompCits` uses a two-pass approach: first groups all citation entries by `_normComp(compName)`, picks canonical, then stores under BOTH `canonical` name AND `__norm__<key>` fallback. Lookup tries both:
+```js
+compCits[activeCitComp] || compCits['__norm__' + _normComp(activeCitComp)]
+```
+
+---
+
+## Time range filter
+
+Four options: **All time** / **Last 20 days** / **Last 14 days** / **Last 7 days** / **Last run**.
+
+`setTimeRange(range)` updates `currentTimeRange` and calls `_applyTimeRange()`, which either resets from `D_ORIG` (for "all") or calls `_computeFilteredData(brandKey)` to re-aggregate from `RAW_HISTORY` entries within the date window.
+
+**Important**: `_buildPromptComps(bk)` and `_buildCompCits(bk)` do their own date filtering internally using the same `pcInRange()` pattern. Their results must be invalidated when time range changes: `_promptComps={}` and `_compCitsCache={}` are reset inside `_applyTimeRange()`.
+
+---
+
+## Prompts table
+
+Default sort: **Visibility DESC** (applied on every render). Sort column state: `let sortCol='visibility', sortDir='desc'`.
+
+**Visibility sort metric** (must be consistent with the badge display):
+```js
+// For 'all' model: fraction of distinct models with mentioned=true
+av = Object.values(p.models).filter(m => m && m.mentioned).length / Object.values(p.models).length;
+// For specific model:
+av = (p.models[activeModel] && p.models[activeModel].mentioned) ? 1 : 0;
+```
+Do NOT use `p.mentions / p.totalRuns` — that's a historical ratio and gives different ordering than the badge.
+
+**Mentioned / Not mentioned filter:**
+```js
+// Mentioned: any model has mentioned=true
+Object.values(p.models).some(m => m && m.mentioned)
+// Not mentioned: no model has mentioned=true
+!Object.values(p.models).some(m => m && m.mentioned)
+```
+Do NOT use `p.mentions > 0` — that uses historical run count, not current model state.
+
+**Top Competitors column**: 3 favicon icons for the top competitors for that prompt/model combo, powered by `_promptComps[promptId][modelKey || 'all']`. Hover tooltip shows name + count. Updates with both time range filter and model filter.
+
+---
+
+## Sentiment tab
+
+**Sentiment filter bar** (above stat tiles): All / Positive / Neutral / Negative / Uncertain. State: `let sentimentFilter='all'`. Filters the mention cards only — tiles always show full counts for the active model.
+
+**Tile counts** are model-aware:
+- If `activeModel === 'all'`: use pre-aggregated `s.positive`, `s.neutral`, etc.
+- If model is active: count mentions in `s.mentions.filter(m => m.model === activeModel)` per sentiment type.
+
+**Mention cards** are filtered by BOTH `activeModel` and `sentimentFilter`.
+
+---
+
+## Overview line chart (Visibility Over Time)
+
+- **All lines solid** (`borderDash: []`) — no dashed lines for competitors
+- **Custom external tooltip** (`tooltip: {enabled: false, external: fn}`): renders favicons + brand/competitor labels + % values. The built-in colored-square tooltip is disabled.
+- **Competitors hidden by default** in last-run mode (`showLine: !isLastRun`)
+
+---
+
+## Stat cards — Best Score
+
+The Best Score card subtitle is model-aware:
+- When a model is active: subtitle says "Rank 1 by [Model Name]" or "highest ranking by [Model Name]"
+- When all models active: scan all prompts/models to find which model achieved the highest score, use that model in the subtitle
+
+Never hardcode "Rank 1 by Perplexity" — always derive the model dynamically from `bestScoreModel`.
+
+---
+
 ## Data quality rules
 
 These apply every time you build or debug a report. They prevent the most common output quality issues.

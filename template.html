@@ -33,7 +33,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-seri
 .mb-btn{display:flex;align-items:center;gap:5px;padding:4px 10px;border-radius:20px;border:1px solid var(--border);background:var(--surface);color:var(--ink3);font-size:12px;font-weight:500;cursor:pointer;white-space:nowrap;transition:all .15s}
 .mb-btn img{width:14px;height:14px;border-radius:3px;flex-shrink:0}
 .mb-btn.active{background:var(--ink);border-color:var(--ink);color:#fff}
-.mb-btn.active img{filter:brightness(0) invert(1)}
+.mb-btn.active img{filter:brightness(10)}
 .subnav{position:sticky;top:102px;z-index:180;background:var(--paper);border-bottom:1px solid var(--border);padding:0 28px}
 .sn-inner{display:flex;overflow-x:auto;scrollbar-width:none}
 .sn-inner::-webkit-scrollbar{display:none}
@@ -79,14 +79,20 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-seri
 .mdot-wrap:hover::after{opacity:1}
 .mdot-img{width:20px;height:20px;border-radius:4px;border:1.5px solid var(--border);object-fit:contain;display:block;background:#fff}
 .mdot-miss{opacity:.2;filter:grayscale(1)}
+.comp-iw{position:relative;display:inline-flex;cursor:default}
+.comp-iw img{width:22px;height:22px;border-radius:4px;border:1.5px solid var(--border);background:var(--bg2)}
+.comp-itip{position:absolute;bottom:calc(100% + 6px);left:50%;transform:translateX(-50%);background:#1e293b;color:#fff;font-size:11px;line-height:1.45;padding:5px 8px;border-radius:6px;white-space:nowrap;pointer-events:none;opacity:0;transition:opacity .15s;z-index:30}
+.comp-iw:hover .comp-itip{opacity:1}
+.comp-itip::after{content:'';position:absolute;top:100%;left:50%;transform:translateX(-50%);border:4px solid transparent;border-top-color:#1e293b}
+.comp-icons{display:flex;gap:4px;flex-wrap:wrap;align-items:center}
 .vis-badge{display:inline-flex;align-items:center;gap:3px;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:600}
 .vis-full{background:var(--v-bg);color:var(--v-text)}
 .vis-part{background:var(--warn-bg);color:var(--warn)}
 .vis-none{background:var(--surface2);color:var(--ink4)}
 .pos-badge{font-size:12px;font-weight:600;color:var(--ink2)}
 /* sentiment */
-.sent-tiles{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:18px}
-.sent-tile{background:var(--paper);border:1px solid var(--border);border-radius:var(--radius);padding:14px 18px;text-align:center}
+.sent-tiles{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:28px;margin-top:20px}
+.sent-tile{background:var(--paper);border:1px solid var(--border);border-radius:var(--radius);padding:16px 18px 18px;text-align:center}
 .st-num{font-size:30px;font-weight:700;line-height:1}
 .st-lbl{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;margin-top:4px}
 .spos .st-num,.spos .st-lbl{color:#15803d}.sneu .st-num,.sneu .st-lbl{color:#64748b}
@@ -217,6 +223,24 @@ tr.dom-row-open .dom-chev{transform:rotate(180deg)}
 .info-tip svg{width:12px;height:12px}
 .info-tip::after{content:attr(data-tip);position:absolute;bottom:calc(100% + 5px);left:50%;transform:translateX(-50%);background:#111827;color:#fff;font-size:11px;white-space:nowrap;padding:4px 9px;border-radius:6px;opacity:0;pointer-events:none;transition:opacity .12s;z-index:400;max-width:260px;white-space:normal;line-height:1.4;text-align:left;width:max-content}
 .info-tip:hover::after{opacity:1}
+.cit-comp-bar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:14px 18px 0;margin-bottom:4px}
+.cit-comp-label{font-size:11px;font-weight:600;color:var(--ink4);letter-spacing:.06em;text-transform:uppercase;white-space:nowrap}
+.cit-comp-dd{position:relative;display:inline-block}
+.cit-comp-trigger{display:flex;align-items:center;gap:6px;padding:6px 12px;border-radius:8px;border:1.5px solid var(--border);background:var(--bg2);color:var(--ink2);font-size:13px;font-weight:500;cursor:pointer;transition:all .15s;min-width:180px}
+.cit-comp-trigger:hover,.cit-comp-trigger:focus{border-color:var(--v);outline:none}
+.cit-comp-trigger img{width:14px;height:14px;border-radius:3px;flex-shrink:0}
+.cit-comp-trigger span{flex:1}
+.cit-comp-menu{position:absolute;top:calc(100% + 4px);left:0;min-width:220px;background:var(--paper);border:1.5px solid var(--border);border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.12);z-index:200;overflow:hidden;display:none}
+.cit-comp-menu.open{display:block}
+.cit-comp-opt{display:flex;align-items:center;gap:8px;padding:8px 12px;font-size:13px;color:var(--ink2);cursor:pointer;transition:background .1s}
+.cit-comp-opt:hover{background:var(--surface2)}
+.cit-comp-opt.active{background:var(--surface2);font-weight:600;color:var(--v)}
+.cit-comp-opt img{width:14px;height:14px;border-radius:3px;flex-shrink:0}
+/* time range filter */
+.time-filter{display:flex;background:var(--surface);border:1px solid var(--border);border-radius:7px;overflow:hidden}
+.tf-btn{padding:5px 11px;font-size:12px;font-weight:500;cursor:pointer;border:none;background:transparent;color:var(--ink3);transition:all .15s;white-space:nowrap}
+.tf-btn.active{background:var(--ink);color:#fff;font-weight:600}
+.tf-btn:hover:not(.active){background:var(--surface2);color:var(--ink2)}
 @media(max-width:1100px){.stat-row{grid-template-columns:repeat(3,1fr)}}
 @media(max-width:780px){
   .stat-row,.two-col,.act-grid,.sent-tiles{grid-template-columns:1fr 1fr}
@@ -224,30 +248,6 @@ tr.dom-row-open .dom-chev{transform:rotate(180deg)}
   .wrap,.header,.model-bar,.subnav{padding-left:14px;padding-right:14px}
 }
 @media(max-width:480px){.stat-row,.sent-tiles,.act-grid{grid-template-columns:1fr}}
-.comp-icons{display:flex;gap:3px;align-items:center}
-.comp-iw{position:relative;display:inline-flex;cursor:default}
-.comp-iw img{width:22px;height:22px;border-radius:4px;border:1.5px solid var(--border);background:var(--bg2)}
-.comp-itip{position:absolute;bottom:calc(100% + 6px);left:50%;transform:translateX(-50%);background:#1e293b;color:#fff;font-size:11px;line-height:1.45;padding:5px 8px;border-radius:6px;white-space:nowrap;pointer-events:none;opacity:0;transition:opacity .15s;z-index:30}
-.comp-iw:hover .comp-itip{opacity:1}
-.comp-itip::after{content:'';position:absolute;top:100%;left:50%;transform:translateX(-50%);border:4px solid transparent;border-top-color:#1e293b}
-.cit-comp-bar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:14px 18px 0;margin-bottom:4px}
-.cit-comp-label{font-size:11px;font-weight:600;color:var(--ink4);letter-spacing:.06em;text-transform:uppercase;white-space:nowrap}
-.cit-comp-dd{position:relative;display:inline-block}
-.cit-comp-trigger{display:flex;align-items:center;gap:6px;padding:6px 12px;border-radius:8px;border:1.5px solid var(--border);background:var(--bg2);color:var(--ink2);font-size:13px;font-weight:500;cursor:pointer;transition:all .15s;min-width:180px}
-.cit-comp-trigger:hover,.cit-comp-trigger:focus{border-color:var(--v);outline:none}
-.cit-comp-trigger img{width:14px;height:14px;border-radius:3px;flex-shrink:0}
-.cit-dd-chev{margin-left:auto;color:var(--ink4);flex-shrink:0}
-.cit-comp-menu{position:absolute;top:calc(100% + 4px);left:0;min-width:220px;background:var(--paper);border:1.5px solid var(--border);border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.12);z-index:200;overflow:hidden;display:none}
-.cit-comp-menu.open{display:block}
-.cit-comp-opt{display:flex;align-items:center;gap:8px;padding:8px 12px;font-size:13px;color:var(--ink2);cursor:pointer;transition:background .1s}
-.cit-comp-opt:hover{background:var(--surface2)}
-.cit-comp-opt.active{background:var(--surface2);font-weight:600;color:var(--v)}
-.cit-comp-opt img{width:14px;height:14px;border-radius:3px;flex-shrink:0}
-.comp-list-hdr{display:flex;align-items:center;gap:10px;padding:0 0 6px;border-bottom:1.5px solid var(--border);margin-bottom:4px}
-.clh-main{flex:1}
-.clh-cell{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--ink4);text-align:right;flex-shrink:0}
-.clh-mentions{width:74px}
-.clh-score{width:60px;display:flex;align-items:center;justify-content:flex-end;gap:3px}
 </style>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-YV8FCLN403"></script>
@@ -260,7 +260,14 @@ tr.dom-row-open .dom-chev{transform:rotate(180deg)}
     <span class="h-sep">|</span>
     <div class="brand-toggle">%%BRAND_TOGGLE%%</div>
   </div>
-  <div class="h-meta">April 2026 &middot; 30 prompts &middot; 5 AI models</div>
+  <div class="time-filter">
+    <button class="tf-btn active" onclick="setTimeRange('all',this)">All data</button>
+    <button class="tf-btn" onclick="setTimeRange('last-20',this)">Last 20 days</button>
+    <button class="tf-btn" onclick="setTimeRange('last-14',this)">Last 14 days</button>
+    <button class="tf-btn" onclick="setTimeRange('last-7',this)">Last 7 days</button>
+    <button class="tf-btn" onclick="setTimeRange('last-run',this)">Last run</button>
+  </div>
+  <div class="h-meta" id="hMeta">May 2026 &middot; 5 AI models</div>
 </header>
 <div class="model-bar">
   <span class="mb-label">Filter by model</span>
@@ -319,7 +326,16 @@ tr.dom-row-open .dom-chev{transform:rotate(180deg)}
     </div>
   </div>
 </div>
-<div id="panel-sentiment" class="panel"><div id="sentContent"></div></div>
+<div id="panel-sentiment" class="panel">
+  <div class="filter-bar" id="sentFilterBar">
+    <button class="fb-btn active" onclick="setSentFilter('all',this)">All</button>
+    <button class="fb-btn" onclick="setSentFilter('positive',this)">Positive</button>
+    <button class="fb-btn" onclick="setSentFilter('neutral',this)">Neutral</button>
+    <button class="fb-btn" onclick="setSentFilter('negative',this)">Negative</button>
+    <button class="fb-btn" onclick="setSentFilter('uncertain',this)">Uncertain</button>
+  </div>
+  <div id="sentContent"></div>
+</div>
 <div id="panel-competitors" class="panel">
   <div class="two-col">
     <div class="cc">
@@ -349,15 +365,15 @@ tr.dom-row-open .dom-chev{transform:rotate(180deg)}
 </div>
 </div>
 <script>
-const D=%%DATA%%;
+const D_ORIG=%%DATA%%;
+const D=JSON.parse(JSON.stringify(D_ORIG));
 const DURL=%%DOMAIN_URLS%%;
 const DCAT=%%DOMAIN_CATEGORIES%%;
-const MODEL_META={'google-aio':{label:'Google AIO',domain:'google.com'},'google-ai-mode':{label:'Google AI Mode',domain:'google.com'},'gemini-2.5-flash':{label:'Gemini',domain:'gemini.google.com'},'sonar':{label:'Perplexity',domain:'perplexity.ai'},'gpt-4o-mini':{label:'ChatGPT',domain:'openai.com'}};
+const MODEL_META={'google-aio':{label:'Google AIO',domain:'google.com'},'google-ai-mode':{label:'Google AI Mode',domain:'google.com'},'gemini-2.5-flash':{label:'Gemini',domain:'gemini.google.com'},'sonar':{label:'Perplexity (Sonar)',domain:'perplexity.ai'},'gpt-4o-mini':{label:'ChatGPT',domain:'openai.com'}};
 const MODEL_ORDER=['google-aio','google-ai-mode','gemini-2.5-flash','sonar','gpt-4o-mini'];
-const PROMPT_COMPS=%%PROMPT_COMPS%%;
-const COMP_CITS=%%COMP_CITS%%;
 const COMP_DOMAINS=%%COMP_DOMAINS%%;
 const BRAND_CFG=%%BRAND_CFG%%;
+const RAW_HISTORY=%%RAW_HISTORY%%;
 const ICONS={
   alert:'<svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M8 2.5L1.5 13.5h13L8 2.5z"/><path d="M8 7v3"/><circle cx="8" cy="12" r=".5" fill="currentColor" stroke="none"/></svg>',
   list:'<svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M2 4h12M2 8h12M2 12h7"/></svg>',
@@ -371,9 +387,181 @@ const ICONS={
 };
 const ACTIONS=%%ACTIONS%%;
 let currentBrand='%%DEFAULT_BRAND%%',activeModel='all',promptFilter='all',actFilter='all',searchQuery='';
-var activeCitComp='all';
 let sortCol='visibility',sortDir='desc';
-function setBrand(b,btn){currentBrand=b;sortCol='visibility';sortDir='desc';['prompt','visibility','position','sentiment'].forEach(function(c){var arr=document.getElementById('sa-'+c);var th=document.getElementById('th-'+c);if(!arr||!th)return;if(c==='visibility'){th.classList.add('sorted');arr.classList.add('sorted');arr.innerHTML='&#8595;';}else{th.classList.remove('sorted');arr.classList.remove('sorted');arr.innerHTML='&#8597;';}});document.querySelectorAll('.bt-btn').forEach(x=>x.classList.remove('active'));btn.classList.add('active');renderAll();}
+let currentTimeRange='all';
+let sentimentFilter='all';
+function setSentFilter(f,btn){sentimentFilter=f;document.querySelectorAll('#sentFilterBar .fb-btn').forEach(function(x){x.classList.remove('active');});btn.classList.add('active');renderSentiment();}
+
+/* ── Time range helpers ─────────────────────────────────────────────────── */
+function _daysBack(dateStr,days){var d=new Date(dateStr+'T00:00:00');d.setDate(d.getDate()-days);return d.toISOString().split('T')[0];}
+function _extractDomainJS(url){try{var parsed=new URL(url);var h=parsed.hostname.toLowerCase();return h.startsWith('www.')?h.slice(4):h;}catch(e){return url;}}
+function _normComp(name){var n=name.trim().toLowerCase();n=n.replace(/\.(ai|com|io|co|org|net|app)$/,'');n=n.replace(/\s+ai$/,'');n=n.replace(/ai$/,'');n=n.replace(/\s+(digital|agency|media|platform|labs?|technologies?|solutions?)$/,'');return n.replace(/[\s\-]/g,'');}
+function _dedupeComps(comps){var groups={};comps.forEach(function(c){var norm=_normComp(c.name);if(!groups[norm]){groups[norm]={canonical:c.name,canonicalMentions:c.mentions,mentions:0,avgScore:0,topSentiment:c.topSentiment,models:[],summaries:[]};}var g=groups[norm];g.mentions+=c.mentions;if(c.mentions>g.canonicalMentions){g.canonical=c.name;g.canonicalMentions=c.mentions;}(c.models||[]).forEach(function(m){if(g.models.indexOf(m)===-1)g.models.push(m);});});return Object.values(groups).map(function(g){return {name:g.canonical,mentions:g.mentions,avgScore:0,topSentiment:g.topSentiment,models:g.models,summaries:[]};}).sort(function(a,b){return b.mentions-a.mentions;});}
+
+function _computeFilteredData(brandKey){
+  var rh=RAW_HISTORY[brandKey];
+  if(!rh||!rh.runDates||!rh.runDates.length)return null;
+  var runDates=rh.runDates;
+  var maxDate=runDates[runDates.length-1];
+  var cutoffDate=null,lastRunOnly=false;
+  if(currentTimeRange==='last-run'){lastRunOnly=true;}
+  else if(currentTimeRange==='last-7'){cutoffDate=_daysBack(maxDate,7);}
+  else if(currentTimeRange==='last-14'){cutoffDate=_daysBack(maxDate,14);}
+  else if(currentTimeRange==='last-20'){cutoffDate=_daysBack(maxDate,20);}
+  function inRange(date){if(lastRunOnly)return date===maxDate;if(cutoffDate)return date>=cutoffDate;return true;}
+  var bk=BRAND_CFG[brandKey].key;
+
+  /* --- prompts --- */
+  var prompts=rh.prompts.map(function(rp){
+    var fe=rp.entries.filter(function(e){return inRange(e.date);});
+    fe.sort(function(a,b){return b.date.localeCompare(a.date);});
+    var models={},mentions=0,totalRuns=fe.length,scores=[];
+    fe.forEach(function(e){
+      if(!(e.model in models)){
+        models[e.model]={mentioned:e.hit,score:e.sc||0,rank:e.rk,sentiment:e.snt||null,snippet:''};
+      }
+      if(e.hit){mentions++;if(e.sc)scores.push(e.sc);}
+    });
+    var avgScore=scores.length?Math.round(scores.reduce(function(a,b){return a+b;},0)/scores.length*100)/100:0;
+    var bestScore=scores.length?Math.max.apply(null,scores):0;
+    return {id:rp.id,text:rp.text,avgScore:avgScore,bestScore:bestScore,mentions:mentions,totalRuns:totalRuns,models:models};
+  });
+
+  /* --- citations --- */
+  var urlData={},modelCit={},domainTypeCounts={},contentTypeCounts={};
+  rh.prompts.forEach(function(rp){
+    rp.entries.filter(function(e){return inRange(e.date);}).forEach(function(e){
+      (e.srcs||[]).forEach(function(src){
+        if(!src.u)return;
+        var url=src.u,title=src.t,model=e.model;
+        var pt=src.pt||'blog_article',ct=src.ct||'blog_article';
+        if(!urlData[url])urlData[url]={title:title,count:0,models:{},mc:{}};
+        urlData[url].count++;urlData[url].models[model]=true;
+        urlData[url].mc[model]=(urlData[url].mc[model]||0)+1;
+        domainTypeCounts[pt]=(domainTypeCounts[pt]||0)+1;
+        contentTypeCounts[ct]=(contentTypeCounts[ct]||0)+1;
+        if(!modelCit[model])modelCit[model]={total:0,domains:{},domainTypes:{},contentTypes:{}};
+        modelCit[model].total++;
+        var domain=_extractDomainJS(url);
+        modelCit[model].domains[domain]=(modelCit[model].domains[domain]||0)+1;
+        modelCit[model].domainTypes[pt]=(modelCit[model].domainTypes[pt]||0)+1;
+        modelCit[model].contentTypes[ct]=(modelCit[model].contentTypes[ct]||0)+1;
+      });
+    });
+  });
+  var domainCounts={};
+  Object.keys(urlData).forEach(function(url){
+    var domain=_extractDomainJS(url);
+    domainCounts[domain]=(domainCounts[domain]||0)+urlData[url].count;
+  });
+  var topDomains=Object.keys(domainCounts).map(function(d){return {domain:d,count:domainCounts[d]};}).sort(function(a,b){return b.count-a.count;}).slice(0,20);
+  var totalCit=Object.values(urlData).reduce(function(a,x){return a+x.count;},0);
+  var origCit=D_ORIG.citations[bk];
+  /* Use actual page/content type counts from filtered data; fall back to proportional scaling if pt/ct not in raw data */
+  var hasPtCt=rh.prompts.length>0&&rh.prompts[0].entries.length>0&&'pt' in (rh.prompts[0].entries[0].srcs||[{}])[0];
+  var domainTypesArr,contentTypesArr;
+  if(hasPtCt||Object.keys(domainTypeCounts).length>0){
+    domainTypesArr=Object.keys(domainTypeCounts).map(function(t){return {type:t,count:domainTypeCounts[t]};}).sort(function(a,b){return b.count-a.count;});
+    contentTypesArr=Object.keys(contentTypeCounts).map(function(t){return {type:t,count:contentTypeCounts[t]};}).sort(function(a,b){return b.count-a.count;});
+  } else {
+    var scale=origCit.total>0?totalCit/origCit.total:1;
+    domainTypesArr=origCit.domainTypes.map(function(dt){return {type:dt.type,count:Math.max(1,Math.round(dt.count*scale))};}).filter(function(dt){return dt.count>0;});
+    contentTypesArr=origCit.contentTypes.map(function(ct){return {type:ct.type,count:Math.max(1,Math.round(ct.count*scale))};}).filter(function(ct){return ct.count>0;});
+  }
+  var citations={
+    total:totalCit,uniqueUrls:Object.keys(urlData).length,uniqueDomains:Object.keys(domainCounts).length,
+    domainTypes:domainTypesArr,contentTypes:contentTypesArr,
+    topDomains:topDomains,topListicles:origCit.topListicles,
+  };
+  var modelCitations={};
+  Object.keys(modelCit).forEach(function(mk){
+    var mc=modelCit[mk];
+    var topDoms=Object.keys(mc.domains).map(function(d){return {domain:d,count:mc.domains[d]};}).sort(function(a,b){return b.count-a.count;}).slice(0,10);
+    var mcDtArr=Object.keys(mc.domainTypes).map(function(t){return {type:t,count:mc.domainTypes[t]};}).sort(function(a,b){return b.count-a.count;});
+    var mcCtArr=Object.keys(mc.contentTypes).map(function(t){return {type:t,count:mc.contentTypes[t]};}).sort(function(a,b){return b.count-a.count;});
+    modelCitations[mk]={total:mc.total,uniqueDomains:Object.keys(mc.domains).length,topDomains:topDoms,domainTypes:mcDtArr,contentTypes:mcCtArr};
+  });
+
+  /* --- competitors --- */
+  var compData={};
+  rh.prompts.forEach(function(rp){
+    rp.entries.filter(function(e){return inRange(e.date);}).forEach(function(e){
+      (e.comps||[]).forEach(function(name){
+        if(!name)return;
+        if(!compData[name])compData[name]={mentions:0,models:{}};
+        compData[name].mentions++;compData[name].models[e.model]=true;
+      });
+    });
+  });
+  var competitors=_dedupeComps(Object.keys(compData).map(function(name){
+    var info=compData[name];
+    return {name:name,mentions:info.mentions,avgScore:0,topSentiment:'neutral',models:Object.keys(info.models),summaries:[]};
+  }));
+
+  /* --- sentiment --- */
+  var sentMentions=[];
+  rh.prompts.forEach(function(rp){
+    rp.entries.filter(function(e){return inRange(e.date)&&e.hit&&e.snt;}).forEach(function(e){
+      sentMentions.push({prompt:rp.text,model:e.model,rank:e.rk,score:e.sc,sentiment:e.snt,reason:e.rsn||'',context:e.ctx||'',competitors:e.comps||[]});
+    });
+  });
+  var sentCounts={positive:0,neutral:0,negative:0,uncertain:0};
+  sentMentions.forEach(function(m){if(sentCounts.hasOwnProperty(m.sentiment))sentCounts[m.sentiment]++;});
+  var sentiment=Object.assign({total_mentions:sentMentions.length,mentions:sentMentions},sentCounts);
+
+  return {
+    prompts:{[bk]:prompts},citations:{[bk]:citations},competitors:{[bk]:competitors},
+    sentiment:{[bk]:sentiment},modelCitations:{[bk]:modelCitations},
+  };
+}
+
+function _applyTimeRange(){
+  var bk=BRAND_CFG[currentBrand].key;
+  if(currentTimeRange==='all'){
+    D.prompts[bk]=D_ORIG.prompts[bk];
+    D.citations[bk]=D_ORIG.citations[bk];
+    D.competitors[bk]=D_ORIG.competitors[bk];
+    D.sentiment[bk]=D_ORIG.sentiment[bk];
+    D.modelCitations[bk]=D_ORIG.modelCitations[bk];
+  } else {
+    var filtered=_computeFilteredData(currentBrand);
+    if(filtered){
+      D.prompts[bk]=filtered.prompts[bk];
+      D.citations[bk]=filtered.citations[bk];
+      D.competitors[bk]=filtered.competitors[bk];
+      D.sentiment[bk]=filtered.sentiment[bk];
+      D.modelCitations[bk]=filtered.modelCitations[bk];
+    }
+  }
+  /* update h-meta with date range info */
+  var rh=RAW_HISTORY[currentBrand];
+  var meta='5 AI models';
+  if(rh&&rh.runDates&&rh.runDates.length){
+    var rd=rh.runDates;
+    var maxDate=rd[rd.length-1];
+    if(currentTimeRange==='last-run'){
+      meta='Last run: '+maxDate+' &middot; 5 AI models';
+    } else if(currentTimeRange!=='all'){
+      var days={'last-7':7,'last-14':14,'last-20':20}[currentTimeRange];
+      var cutoff=_daysBack(maxDate,days);
+      var inRangeDates=rd.filter(function(d){return d>=cutoff;});
+      meta=inRangeDates.length+' run'+(inRangeDates.length!==1?'s':'')+' &middot; '+cutoff+' to '+maxDate;
+    } else {
+      meta=rd.length+' run'+(rd.length!==1?'s':'')+' &middot; '+rd[0]+' to '+maxDate;
+    }
+  }
+  var hm=document.getElementById('hMeta');if(hm)hm.innerHTML=meta;
+}
+
+function setTimeRange(range,btn){
+  currentTimeRange=range;
+  document.querySelectorAll('.tf-btn').forEach(function(x){x.classList.remove('active');});
+  btn.classList.add('active');
+  _applyTimeRange();
+  renderAll();
+}
+
+function setBrand(b,btn){currentBrand=b;sortCol='visibility';sortDir='desc';['prompt','visibility','position','sentiment','competitors'].forEach(function(c){var arr=document.getElementById('sa-'+c);var th=document.getElementById('th-'+c);if(!arr||!th)return;if(c==='visibility'){th.classList.add('sorted');arr.classList.add('sorted');arr.innerHTML='&#8595;';}else{th.classList.remove('sorted');arr.classList.remove('sorted');arr.innerHTML='&#8597;';}});document.querySelectorAll('.bt-btn').forEach(x=>x.classList.remove('active'));btn.classList.add('active');_applyTimeRange();renderAll();}
 function setModel(m,btn){activeModel=m;document.querySelectorAll('.mb-btn').forEach(x=>x.classList.remove('active'));btn.classList.add('active');renderAll();}
 function switchTab(t,btn){document.querySelectorAll('.stab').forEach(x=>x.classList.remove('active'));btn.classList.add('active');document.querySelectorAll('.panel').forEach(x=>x.classList.remove('active'));document.getElementById('panel-'+t).classList.add('active');}
 function renderAll(){renderStats();renderOverview();renderPrompts();renderSentiment();renderCompetitors();renderCitations();renderActionsGrid();}
@@ -387,86 +575,163 @@ function renderOverview(){
   var bk=BRAND_CFG[currentBrand].key;
   var pd=D.prompts[bk];
   var s=D.sentiment[bk];
-  var comps=D.competitors[bk];
+  var comps=_dedupeComps(D.competitors[bk]);
   var cit=D.citations[bk];
-  var mc=activeModel!=='all'&&D.modelCitations&&D.modelCitations[bk]&&D.modelCitations[bk][activeModel]?D.modelCitations[bk][activeModel]:null;
-  /* model coverage: how many prompts each model mentions the brand */
-  var modelKeys=Object.keys(MODEL_META);
-  var covLabels=modelKeys.map(function(k){return MODEL_META[k].label;});
-  var covData=modelKeys.map(function(k){
-    return pd.filter(function(p){return p.models[k]&&p.models[k].mentioned;}).length;
-  });
-  /* competitor top 8 */
+  var brandName=BRAND_CFG[currentBrand].name;
+
+  /* ── Visibility time series ─────────────────────────────────────────── */
+  var rh=RAW_HISTORY[currentBrand];
+  var inRangeDates=[];
+  if(rh&&rh.runDates&&rh.runDates.length){
+    var allD=rh.runDates,maxD=allD[allD.length-1];
+    if(currentTimeRange==='last-run'){inRangeDates=[maxD];}
+    else if(currentTimeRange==='all'){inRangeDates=allD;}
+    else{var ndays={'last-7':7,'last-14':14,'last-20':20}[currentTimeRange];var cutoffD=_daysBack(maxD,ndays);inRangeDates=allD.filter(function(d){return d>=cutoffD;});}
+  }
+  var isLastRun=(currentTimeRange==='last-run')||inRangeDates.length<=1;
+  var top5comps=comps.slice(0,5);
+  var dayTotals={},dayBrandHits={},dayCompHits={};
+  top5comps.forEach(function(c){dayCompHits[c.name]={};});
+  inRangeDates.forEach(function(d){dayTotals[d]=0;dayBrandHits[d]=0;top5comps.forEach(function(c){dayCompHits[c.name][d]=0;});});
+  if(rh){
+    rh.prompts.forEach(function(rp){
+      rp.entries.filter(function(e){return inRangeDates.indexOf(e.date)>-1&&(activeModel==='all'||e.model===activeModel);}).forEach(function(e){
+        dayTotals[e.date]=(dayTotals[e.date]||0)+1;
+        if(e.hit)dayBrandHits[e.date]=(dayBrandHits[e.date]||0)+1;
+        top5comps.forEach(function(c){if((e.comps||[]).indexOf(c.name)>-1)dayCompHits[c.name][e.date]=(dayCompHits[c.name][e.date]||0)+1;});
+      });
+    });
+  }
+  var brandVis=inRangeDates.map(function(d){return dayTotals[d]>0?Math.round(dayBrandHits[d]/dayTotals[d]*100):null;});
+  var compVisSeries=top5comps.map(function(c){return {name:c.name,data:inRangeDates.map(function(d){return dayTotals[d]>0?Math.round((dayCompHits[c.name][d]||0)/dayTotals[d]*100):null;})};});
+
+  /* ── Competitor mentions ────────────────────────────────────────────── */
   var compFiltered=activeModel==='all'?comps:comps.filter(function(c){return c.models&&c.models.indexOf(activeModel)>-1;});
   var top8=compFiltered.slice(0,8);
-  var compLabels=top8.map(function(c){return c.name;});
-  var compData=top8.map(function(c){return activeModel!=='all'&&c.modelMentions&&c.modelMentions[activeModel]!=null?c.modelMentions[activeModel]:c.mentions;});
-  /* sentiment breakdown */
+  var modelCompCounts={};
+  if(activeModel!=='all'&&rh){
+    rh.prompts.forEach(function(rp){
+      rp.entries.filter(function(e){return inRangeDates.indexOf(e.date)>-1&&e.model===activeModel;}).forEach(function(e){
+        (e.comps||[]).forEach(function(c){modelCompCounts[c]=(modelCompCounts[c]||0)+1;});
+      });
+    });
+  }
+  if(activeModel!=='all'){
+    top8=compFiltered.map(function(c){return Object.assign({},c,{modelMentions:modelCompCounts[c.name]||0});}).sort(function(a,b){return b.modelMentions-a.modelMentions;}).slice(0,8);
+  }
+
+  /* ── Sentiment ──────────────────────────────────────────────────────── */
   var sMentions=activeModel==='all'?s.mentions:s.mentions.filter(function(m){return m.model===activeModel;});
   var sentCounts={positive:0,neutral:0,negative:0,uncertain:0};
   sMentions.forEach(function(m){if(sentCounts.hasOwnProperty(m.sentiment))sentCounts[m.sentiment]++;});
-  /* content type top 6 */
-  var ct=((mc&&mc.contentTypes)||cit.contentTypes).slice(0,6);
+
+  /* ── Model-filtered citations ───────────────────────────────────────── */
+  var activeCit=cit;
+  if(activeModel!=='all'&&D.modelCitations&&D.modelCitations[bk]&&D.modelCitations[bk][activeModel]){
+    var mc=D.modelCitations[bk][activeModel];
+    activeCit={
+      total:mc.total||cit.total,
+      uniqueUrls:cit.uniqueUrls,
+      uniqueDomains:mc.uniqueDomains||cit.uniqueDomains,
+      domainTypes:(mc.domainTypes&&mc.domainTypes.length)?mc.domainTypes:cit.domainTypes,
+      contentTypes:(mc.contentTypes&&mc.contentTypes.length)?mc.contentTypes:cit.contentTypes,
+      topDomains:(mc.topDomains&&mc.topDomains.length)?mc.topDomains:cit.topDomains,
+      topListicles:cit.topListicles,
+    };
+  }
+
+  /* ── Content & page types ───────────────────────────────────────────── */
+  var ct=activeCit.contentTypes.slice(0,6);
   var ctLabels=ct.map(function(x){return x.type.replace(/_/g,' ').replace(/\b\w/g,function(c){return c.toUpperCase();});});
   var ctData=ct.map(function(x){return x.count;});
-  /* page type */
-  var dt=((mc&&mc.domainTypes)||cit.domainTypes).slice(0,6);
+  var dt=activeCit.domainTypes.slice(0,6);
   var dtLabels=dt.map(function(x){return x.type.replace(/_/g,' ').replace(/\b\w/g,function(c){return c.toUpperCase();});});
   var dtData=dt.map(function(x){return x.count;});
-  /* build HTML bar rows helper */
+
+  /* ── Bar helper ─────────────────────────────────────────────────────── */
   function ovBars(items,maxVal,fillClass){
     return items.map(function(item){
       var pct=maxVal>0?Math.round(item.val/maxVal*100):0;
-      return '<div class="ov-bar-row">'+
-        '<div class="ov-bar-lbl"><img src="'+fav(item.icon)+'" onerror="this.style.opacity=\'0\'" alt=""><span>'+item.label+'</span></div>'+
-        '<div class="ov-bar-track"><div class="ov-bar-fill '+fillClass+'" style="width:'+pct+'%"></div></div>'+
-        '<div class="ov-bar-val">'+item.sub+'</div>'+
-      '</div>';
+      return '<div class="ov-bar-row"><div class="ov-bar-lbl"><img src="'+fav(item.icon)+'" onerror="this.style.opacity=\'0\'" alt=""><span>'+item.label+'</span></div><div class="ov-bar-track"><div class="ov-bar-fill '+fillClass+'" style="width:'+pct+'%"></div></div><div class="ov-bar-val">'+item.sub+'</div></div>';
     }).join('');
   }
-  /* model coverage items */
+
+  /* ── Model coverage items ───────────────────────────────────────────── */
+  var modelKeys=Object.keys(MODEL_META);
   var covMax=pd.length||1;
-  var covItems=modelKeys.map(function(k){
-    var mm=MODEL_META[k];
-    return {icon:mm.domain,label:mm.label,val:covData[modelKeys.indexOf(k)],sub:covData[modelKeys.indexOf(k)]+' / '+pd.length};
-  });
-  /* competitor items */
-  var compMax=Math.max.apply(null,top8.map(function(c){return activeModel!=='all'&&c.modelMentions&&c.modelMentions[activeModel]!=null?c.modelMentions[activeModel]:c.mentions;}))||1;
-  var compItems=top8.map(function(c){
-    var cd=COMP_DOMAINS[c.name]||(c.name.toLowerCase().replace(/\s/g,'')+'.com');
-    var dispCount=activeModel!=='all'&&c.modelMentions&&c.modelMentions[activeModel]!=null?c.modelMentions[activeModel]:c.mentions;
-    return {icon:cd,label:c.name,val:dispCount,sub:dispCount+(activeModel!=='all'?' mentions':' total mentions')};
-  });
-  /* top domain items */
-  var topDom=((mc&&mc.topDomains)||cit.topDomains).slice(0,8);
-  var domMax=topDom[0]?topDom[0].count:1;
-  var domItems=topDom.map(function(d){
-    return {icon:d.domain,label:d.domain,val:d.count,sub:d.count+' citations'};
-  });
-  var el=document.getElementById('ovContent');
-  el.innerHTML=
+  var covItems=modelKeys.map(function(k){var mm=MODEL_META[k];var cnt=pd.filter(function(p){return p.models[k]&&p.models[k].mentioned;}).length;return {icon:mm.domain,label:mm.label,val:cnt,sub:cnt+' / '+pd.length};});
+  var covItemsFiltered=activeModel==='all'?covItems:covItems.filter(function(item){return item.label===(MODEL_META[activeModel]||{label:activeModel}).label;});
+
+  /* ── Competitor bar items ───────────────────────────────────────────── */
+  var compMax=top8[0]?(activeModel!=='all'?(top8[0].modelMentions||top8[0].mentions):top8[0].mentions):1;
+  var compItems=top8.map(function(c){var cd=COMP_DOMAINS[c.name]||(c.name.toLowerCase().replace(/\s/g,'')+'.com');var mentionVal=activeModel!=='all'?(modelCompCounts[c.name]||0):c.mentions;return {icon:cd,label:c.name,val:mentionVal,sub:mentionVal+' mentions'};});
+
+  /* ── Top domain items ───────────────────────────────────────────────── */
+  var topDom=activeCit.topDomains.slice(0,8),domMax=topDom[0]?topDom[0].count:1;
+  var domItems=topDom.map(function(d){return {icon:d.domain,label:d.domain,val:d.count,sub:d.count+' citations'};});
+
+  /* ── Render HTML ────────────────────────────────────────────────────── */
+  var visSubtitle=brandName+' vs top competitors &middot; '+(isLastRun?'last run snapshot':inRangeDates.length+' data points');
+  document.getElementById('ovContent').innerHTML=
     '<div class="two-col" style="margin-bottom:14px">'+
-      '<div class="cc"><div class="cc-head"><div class="cc-title">Model Coverage</div><div class="cc-sub">prompts triggering a brand mention per AI model</div></div><div class="cc-body"><div class="ov-bar-wrap">'+ovBars(covItems,covMax,'ov-indigo')+'</div></div></div>'+
-      '<div class="cc"><div class="cc-head"><div class="cc-title">Competitor Mentions</div><div class="cc-sub">'+(activeModel!=='all'?(MODEL_META[activeModel]||{label:activeModel}).label+' · ':'')+'top 8 by mention count</div></div><div class="cc-body"><div class="ov-bar-wrap">'+ovBars(compItems,compMax,'ov-green')+'</div></div></div>'+
+      '<div class="cc"><div class="cc-head"><div class="cc-title">Visibility Over Time</div><div class="cc-sub">'+visSubtitle+'</div></div><div class="cc-body" style="height:260px;position:relative"><canvas id="ov-vis"></canvas></div><div id="ov-vis-legend" style="display:flex;flex-wrap:wrap;gap:8px 14px;padding:8px 14px 4px;border-top:1px solid var(--border)"></div></div>'+
+      '<div class="cc"><div class="cc-head"><div class="cc-title">Competitor Mentions</div><div class="cc-sub">'+(activeModel!=='all'?(MODEL_META[activeModel]||{label:activeModel}).label+' &middot; ':'')+'top 8 by mention count</div></div><div class="cc-body"><div class="ov-bar-wrap">'+ovBars(compItems,compMax,'ov-green')+'</div></div></div>'+
     '</div>'+
     '<div class="two-col" style="margin-bottom:14px">'+
       '<div class="cc"><div class="cc-head"><div class="cc-title">Sentiment Breakdown</div><div class="cc-sub">'+sMentions.length+' brand mention'+(sMentions.length!==1?'s':'')+' analysed</div></div><div class="cc-body" style="height:210px;position:relative"><canvas id="ov-sent"></canvas></div></div>'+
-      '<div class="cc"><div class="cc-head"><div class="cc-title">Content Type Distribution</div><div class="cc-sub">'+(activeModel!=='all'?(MODEL_META[activeModel]||{label:activeModel}).label+' · ':'')+'how AI citation sources are classified</div></div><div class="cc-body" style="height:210px;position:relative"><canvas id="ov-ct"></canvas></div></div>'+
+      '<div class="cc"><div class="cc-head"><div class="cc-title">Model Coverage</div><div class="cc-sub">prompts triggering a brand mention per AI model</div></div><div class="cc-body"><div class="ov-bar-wrap">'+ovBars(covItemsFiltered,covMax,'ov-indigo')+'</div></div></div>'+
     '</div>'+
-    '<div class="two-col">'+
-      '<div class="cc"><div class="cc-head"><div class="cc-title">Page Type Distribution</div><div class="cc-sub">'+(activeModel!=='all'?(MODEL_META[activeModel]||{label:activeModel}).label+' · ':'')+'structure of pages AI models cite most</div></div><div class="cc-body" style="height:210px;position:relative"><canvas id="ov-dt"></canvas></div></div>'+
-      '<div class="cc"><div class="cc-head"><div class="cc-title">Top Cited Domains</div><div class="cc-sub">'+(activeModel!=='all'?(MODEL_META[activeModel]||{label:activeModel}).label+' · ':'')+'leading citation sources</div></div><div class="cc-body"><div class="ov-bar-wrap">'+ovBars(domItems,domMax,'ov-violet')+'</div></div></div>'+
+    '<div class="two-col" style="margin-bottom:14px">'+
+      '<div class="cc"><div class="cc-head"><div class="cc-title">Content Type Distribution</div><div class="cc-sub">how AI citation sources are classified</div></div><div class="cc-body" style="height:210px;position:relative"><canvas id="ov-ct"></canvas></div></div>'+
+      '<div class="cc"><div class="cc-head"><div class="cc-title">Page Type Distribution</div><div class="cc-sub">structure of pages AI models cite most</div></div><div class="cc-body" style="height:210px;position:relative"><canvas id="ov-dt"></canvas></div></div>'+
+    '</div>'+
+    '<div style="margin-bottom:14px">'+
+      '<div class="cc"><div class="cc-head"><div class="cc-title">Top Cited Domains</div><div class="cc-sub">leading citation sources</div></div><div class="cc-body"><div class="ov-bar-wrap">'+ovBars(domItems,domMax,'ov-violet')+'</div></div></div>'+
     '</div>';
-  /* bar fill colors */
+
   var styleId='ov-bar-style';
-  if(!document.getElementById(styleId)){var s=document.createElement('style');s.id=styleId;s.textContent='.ov-bar-fill.ov-indigo{background:rgba(79,70,229,.75)}.ov-bar-fill.ov-green{background:rgba(16,185,129,.75)}.ov-bar-fill.ov-violet{background:rgba(139,92,246,.75)}';document.head.appendChild(s);}
+  if(!document.getElementById(styleId)){var st=document.createElement('style');st.id=styleId;st.textContent='.ov-bar-fill.ov-indigo{background:rgba(79,70,229,.75)}.ov-bar-fill.ov-green{background:rgba(16,185,129,.75)}.ov-bar-fill.ov-violet{background:rgba(139,92,246,.75)}';document.head.appendChild(st);}
   var baseFont={family:'-apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-serif',size:11};
-  /* sentiment donut */
+
+  /* ── Visibility line chart ──────────────────────────────────────────── */
+  var visColors=['#4f46e5','#10b981','#f59e0b','#ef4444','#8b5cf6','#ec4899'];
+  var visDatasets=[{label:brandName,data:brandVis,borderColor:visColors[0],backgroundColor:visColors[0]+'20',borderWidth:2.5,pointRadius:isLastRun?7:3,pointHoverRadius:7,fill:false,tension:0,showLine:!isLastRun,spanGaps:true}];
+  compVisSeries.forEach(function(cv,ci){visDatasets.push({label:cv.name,data:cv.data,borderColor:visColors[ci+1],backgroundColor:visColors[ci+1]+'20',borderWidth:1.5,pointRadius:isLastRun?6:2,pointHoverRadius:5,fill:false,tension:0,showLine:!isLastRun,borderDash:[],spanGaps:true});});
+  _ovCharts.vis=new Chart(document.getElementById('ov-vis'),{type:'line',data:{labels:inRangeDates.map(function(d){return d.slice(5);}),datasets:visDatasets},options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},plugins:{legend:{display:false},tooltip:{enabled:false,external:function(context){
+  var tt=context.tooltip;
+  var el=document.getElementById('vis-tooltip');
+  if(!el){el=document.createElement('div');el.id='vis-tooltip';el.style.cssText='position:absolute;background:#1e293b;color:#fff;border-radius:8px;padding:8px 12px;font-size:12px;pointer-events:none;z-index:100;box-shadow:0 4px 12px rgba(0,0,0,.2);transition:opacity .1s;min-width:140px;';document.body.appendChild(el);}
+  if(tt.opacity===0){el.style.opacity='0';return;}
+  var label=tt.dataPoints&&tt.dataPoints[0]?'<div style="font-size:11px;color:rgba(255,255,255,.6);margin-bottom:6px">'+tt.title[0]+'</div>':'';
+  var rows=(tt.dataPoints||[]).map(function(dp){
+    var dsLabel=dp.dataset.label;
+    var domain;
+    var bk=typeof currentBrand!=='undefined'?currentBrand:Object.keys(BRAND_CFG)[0];
+    var brandDomain=BRAND_CFG[bk]&&BRAND_CFG[bk].domain;
+    var brandName=BRAND_CFG[bk]&&BRAND_CFG[bk].name;
+    if(dsLabel===brandName){domain=brandDomain;}
+    else{domain=typeof COMP_DOMAINS!=='undefined'&&COMP_DOMAINS[dsLabel]?(COMP_DOMAINS[dsLabel]):(dsLabel.toLowerCase().replace(/\s+(ai|digital|agency|media|labs?)$/,'').replace(/\s+/g,'')+'.com');}
+    var favUrl='https://www.google.com/s2/favicons?domain='+domain+'&sz=32';
+    var val=dp.parsed.y!==null?dp.parsed.y+'%':'N/A';
+    return '<div style="display:flex;align-items:center;gap:6px;padding:2px 0"><img src="'+favUrl+'" style="width:14px;height:14px;border-radius:3px;border:1px solid rgba(255,255,255,.2)" onerror="this.style.display=\'none\'"><span style="flex:1;color:rgba(255,255,255,.85)">'+dsLabel+'</span><span style="font-weight:600;color:#fff">'+val+'</span></div>';
+  }).join('');
+  el.innerHTML=label+rows;
+  var pos=context.chart.canvas.getBoundingClientRect();
+  el.style.opacity='1';
+  el.style.left=(pos.left+window.scrollX+tt.caretX+12)+'px';
+  el.style.top=(pos.top+window.scrollY+tt.caretY-el.offsetHeight/2)+'px';
+}}},scales:{x:{ticks:{font:baseFont,maxTicksLimit:12},grid:{display:false}},y:{min:0,max:100,ticks:{font:baseFont,callback:function(v){return v+'%';}},grid:{color:'rgba(0,0,0,.05)'}}}}});
+  var visLegend=document.getElementById('ov-vis-legend');
+  if(visLegend){var brandDomain=BRAND_CFG[currentBrand].url||'aipeekaboo.com';var legendItems=[{label:brandName,domain:brandDomain,color:visColors[0]}];top5comps.forEach(function(c,ci){var cd=COMP_DOMAINS[c.name]||(c.name.toLowerCase().replace(/\s/g,'')+'.com');legendItems.push({label:c.name,domain:cd,color:visColors[ci+1]});});visLegend.innerHTML=legendItems.map(function(item){return '<div style="display:flex;align-items:center;gap:5px"><div style="width:20px;height:2px;background:'+item.color+';flex-shrink:0"></div><img src="'+fav(item.domain)+'" style="width:14px;height:14px;border-radius:3px;border:1px solid #e5e7eb;flex-shrink:0" onerror="this.style.display=\'none\'"><span style="font-size:11px;color:#374151;white-space:nowrap">'+item.label+'</span></div>';}).join('');}
+
+  /* ── Sentiment donut ────────────────────────────────────────────────── */
   _ovCharts.sent=new Chart(document.getElementById('ov-sent'),{type:'doughnut',data:{labels:['Positive','Neutral','Negative','Uncertain'],datasets:[{data:[sentCounts.positive,sentCounts.neutral,sentCounts.negative,sentCounts.uncertain],backgroundColor:['#22c55e','#94a3b8','#ef4444','#f59e0b'],borderWidth:0,hoverOffset:6}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'right',labels:{font:baseFont,boxWidth:12,padding:10}},tooltip:{callbacks:{label:function(ctx){var t=ctx.parsed;var sum=ctx.dataset.data.reduce(function(a,b){return a+b;},0);return ctx.label+': '+t+(sum>0?' ('+Math.round(t/sum*100)+'%)':'');}}}}}});
-  /* content type donut */
+
+  /* ── Content type donut ─────────────────────────────────────────────── */
   var ctColors=['#6366f1','#8b5cf6','#ec4899','#f43f5e','#f97316','#eab308'];
   _ovCharts.ct=new Chart(document.getElementById('ov-ct'),{type:'doughnut',data:{labels:ctLabels,datasets:[{data:ctData,backgroundColor:ctColors,borderWidth:0,hoverOffset:6}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'right',labels:{font:baseFont,boxWidth:12,padding:8}},tooltip:{callbacks:{label:function(ctx){var sum=ctx.dataset.data.reduce(function(a,b){return a+b;},0);return ctx.label+': '+ctx.parsed+(sum>0?' ('+Math.round(ctx.parsed/sum*100)+'%)':'');}}}}}});
-  /* page type donut */
+
+  /* ── Page type donut ────────────────────────────────────────────────── */
   var dtColors=['#3b82f6','#06b6d4','#10b981','#84cc16','#f59e0b','#f97316'];
   _ovCharts.dt=new Chart(document.getElementById('ov-dt'),{type:'doughnut',data:{labels:dtLabels,datasets:[{data:dtData,backgroundColor:dtColors,borderWidth:0,hoverOffset:6}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'right',labels:{font:baseFont,boxWidth:12,padding:8}},tooltip:{callbacks:{label:function(ctx){var sum=ctx.dataset.data.reduce(function(a,b){return a+b;},0);return ctx.label+': '+ctx.parsed+(sum>0?' ('+Math.round(ctx.parsed/sum*100)+'%)':'');}}}}}});
 }
@@ -487,10 +752,21 @@ function renderStats(){
       return (p.models[activeModel]&&p.models[activeModel].score)||0;
     }
   }).concat([0]));
+  var bestScoreModel='';
+  if(activeModel!=='all'){
+    bestScoreModel=(MODEL_META[activeModel]||{label:activeModel}).label;
+  } else {
+    var bsm='',bsmVal=0;
+    pd.forEach(function(p){
+      Object.keys(p.models).forEach(function(mk){
+        var mv=p.models[mk];
+        if(mv&&mv.score&&mv.score>bsmVal){bsmVal=mv.score;bsm=mk;}
+      });
+    });
+    if(bsm)bestScoreModel=(MODEL_META[bsm]||{label:bsm}).label;
+  }
   var c=D.citations[bk];
-  var mc_s=activeModel!=='all'&&D.modelCitations&&D.modelCitations[bk]&&D.modelCitations[bk][activeModel]?D.modelCitations[bk][activeModel]:null;
-  var citTotal=mc_s?mc_s.total:c.total;
-  var citUniq=mc_s&&mc_s.topDomains?mc_s.topDomains.length:c.uniqueDomains;
+  var citTotal=activeModel!=='all'&&D.modelCitations&&D.modelCitations[bk]&&D.modelCitations[bk][activeModel]?D.modelCitations[bk][activeModel].total:c.total;
   /* sentiment score */
   var s=D.sentiment[bk];
   var sMentions=activeModel==='all'?s.mentions:s.mentions.filter(function(m){return m.model===activeModel;});
@@ -510,11 +786,12 @@ function renderStats(){
   var avgPos=allRanks.length?(allRanks.reduce(function(a,r){return a+r;},0)/allRanks.length).toFixed(1):null;
   var posCls=avgPos===null?'bad':parseFloat(avgPos)<=2?'good':parseFloat(avgPos)<=4?'warn':'bad';
   var infoSvg='<svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.4"><circle cx="7" cy="7" r="6"/><path d="M7 6v4" stroke-linecap="round"/><circle cx="7" cy="4.5" r=".5" fill="currentColor" stroke="none"/></svg>';
+  var bestScoreTip='Highest AI visibility score (0-100) achieved'+(activeModel!=='all'?' for '+(MODEL_META[activeModel]||{label:activeModel}).label:' across all prompts and models')+'. Score reflects prominence and rank in the AI response';
   document.getElementById('statRow').innerHTML=
     '<div class="stat-card"><div class="sc-label"><span class="info-tip" data-tip="Percentage of total AI model runs where the brand was mentioned (total mentions / total runs across all prompts and models)">'+infoSvg+'</span>AI Visibility</div><div class="sc-val '+visCls+'">'+visPct+'%</div><div class="sc-sub">'+mentioned+' of '+totalRuns+' model runs include a mention</div></div>'+
     '<div class="stat-card"><div class="sc-label"><span class="info-tip" data-tip="Total number of individual AI model query executions across all prompts">'+infoSvg+'</span>Model Runs</div><div class="sc-val">'+totalRuns+'</div><div class="sc-sub">'+promptsMentioned+' of '+pd.length+' prompts trigger a mention</div></div>'+
-    '<div class="stat-card"><div class="sc-label"><span class="info-tip" data-tip="Highest AI visibility score (0-100) achieved across all prompts and models. Score reflects prominence and rank in the AI response">'+infoSvg+'</span>Best Score</div><div class="sc-val '+(bestScore>0?'good':'bad')+'">'+(bestScore>0?bestScore:'None')+'</div><div class="sc-sub">'+(bestScore===100?'Rank 1 by Perplexity':bestScore>0?'highest ranking':'not ranked by any model')+'</div></div>'+
-    '<div class="stat-card"><div class="sc-label"><span class="info-tip" data-tip="Total number of source URLs cited by AI models when answering prompts in this brand\'s topic area">'+infoSvg+'</span>Total Citations</div><div class="sc-val" style="color:var(--v)">'+citTotal.toLocaleString()+'</div><div class="sc-sub">'+citUniq+' unique domains</div></div>'+
+    '<div class="stat-card"><div class="sc-label"><span class="info-tip" data-tip="'+bestScoreTip+'">'+infoSvg+'</span>Best Score</div><div class="sc-val '+(bestScore>0?'good':'bad')+'">'+(bestScore>0?bestScore:'None')+'</div><div class="sc-sub">'+(bestScore===100?'Rank 1 by '+(bestScoreModel||'AI'):bestScore>0?'highest ranking'+(bestScoreModel?' by '+bestScoreModel:''):'not ranked by any model')+'</div></div>'+
+    '<div class="stat-card"><div class="sc-label"><span class="info-tip" data-tip="Total number of source URLs cited by AI models when answering prompts in this brand\'s topic area">'+infoSvg+'</span>Total Citations</div><div class="sc-val" style="color:var(--v)">'+citTotal.toLocaleString()+'</div><div class="sc-sub">'+c.uniqueDomains+' unique domains</div></div>'+
     '<div class="stat-card"><div class="sc-label"><span class="info-tip" data-tip="Share of brand mentions rated as positive sentiment out of all detected mentions">'+infoSvg+'</span>Sentiment Score</div><div class="sc-val '+(sentPct===null?'bad':sentCls)+'">'+(sentPct!==null?sentPct+'%':'N/A')+'</div><div class="sc-sub">'+(sentTotal>0?sentPos+' positive of '+sentTotal+' mentions':'no mentions detected')+'</div></div>'+
     '<div class="stat-card"><div class="sc-label"><span class="info-tip" data-tip="Mean rank position across all AI responses where the brand was mentioned. Lower is better (rank 1 = first recommended)">'+infoSvg+'</span>Avg Position</div><div class="sc-val '+(avgPos===null?'bad':posCls)+'">'+(avgPos!==null?'#'+avgPos:'N/A')+'</div><div class="sc-sub">'+(allRanks.length?'across '+allRanks.length+' ranked responses':'no ranked mentions')+'</div></div>';
 }
@@ -547,9 +824,15 @@ function sortPrompts(arr){
     var av,bv,dir=sortDir==='desc'?-1:1;
     if(sortCol==='prompt'){return dir*a.text.localeCompare(b.text);}
     if(sortCol==='visibility'){
-      if(activeModel==='all'){av=a.mentions;bv=b.mentions;}
-      else{av=(a.models[activeModel]&&a.models[activeModel].mentioned)?1:0;bv=(b.models[activeModel]&&b.models[activeModel].mentioned)?1:0;}
-      return dir*(av-bv)||dir*(bv-av);
+      if(activeModel==='all'){
+        var aModels=Object.values(a.models);var bModels=Object.values(b.models);
+        av=aModels.length?aModels.filter(function(m){return m&&m.mentioned;}).length/aModels.length:0;
+        bv=bModels.length?bModels.filter(function(m){return m&&m.mentioned;}).length/bModels.length:0;
+      } else {
+        av=(a.models[activeModel]&&a.models[activeModel].mentioned)?1:0;
+        bv=(b.models[activeModel]&&b.models[activeModel].mentioned)?1:0;
+      }
+      return dir*(av-bv);
     }
     if(sortCol==='position'){
       if(activeModel==='all'){
@@ -567,10 +850,10 @@ function sortPrompts(arr){
     }
     if(sortCol==='competitors'){
       var aTopC=0,bTopC=0;
-      if(typeof PROMPT_COMPS!=='undefined'){var aPC=PROMPT_COMPS[a.id];
+      var aPC=_promptComps&&_promptComps[a.id];
       if(aPC){var aPCK=activeModel==='all'?'all':activeModel;var aPComps=aPC[aPCK]||aPC['all']||[];aTopC=aPComps.length?(aPComps[0].count||0):0;}
-      var bPC=PROMPT_COMPS[b.id];
-      if(bPC){var bPCK=activeModel==='all'?'all':activeModel;var bPComps=bPC[bPCK]||bPC['all']||[];bTopC=bPComps.length?(bPComps[0].count||0):0;}}
+      var bPC=_promptComps&&_promptComps[b.id];
+      if(bPC){var bPCK=activeModel==='all'?'all':activeModel;var bPComps=bPC[bPCK]||bPC['all']||[];bTopC=bPComps.length?(bPComps[0].count||0):0;}
       return dir*(aTopC-bTopC);
     }
     return 0;
@@ -578,19 +861,53 @@ function sortPrompts(arr){
 }
 /* prompts */
 var _pd=[];
+var _promptComps={};
+function _buildPromptComps(bk){
+  var rh=RAW_HISTORY[bk];if(!rh)return;
+  var runDates=rh.runDates||[];
+  var maxDate=runDates.length?runDates[runDates.length-1]:null;
+  var cutoffDate=null,lastRunOnly=false;
+  if(currentTimeRange==='last-run'){lastRunOnly=true;}
+  else if(currentTimeRange==='last-7'&&maxDate){cutoffDate=_daysBack(maxDate,7);}
+  else if(currentTimeRange==='last-14'&&maxDate){cutoffDate=_daysBack(maxDate,14);}
+  else if(currentTimeRange==='last-20'&&maxDate){cutoffDate=_daysBack(maxDate,20);}
+  function pcInRange(date){if(!date)return true;if(lastRunOnly)return date===maxDate;if(cutoffDate)return date>=cutoffDate;return true;}
+  var result={};
+  (rh.prompts||[]).forEach(function(rp){
+    var pid=rp.id;
+    var allCounts={};var modelCounts={};
+    (rp.entries||[]).filter(function(e){return pcInRange(e.date);}).forEach(function(e){
+      var mk=e.model;
+      (e.comps||[]).forEach(function(c){
+        allCounts[c]=(allCounts[c]||0)+1;
+        if(!modelCounts[mk])modelCounts[mk]={};
+        modelCounts[mk][c]=(modelCounts[mk][c]||0)+1;
+      });
+    });
+    var toSorted=function(obj){return Object.keys(obj).map(function(n){return{name:n,count:obj[n]};}).sort(function(a,b){return b.count-a.count;});};
+    result[pid]={all:toSorted(allCounts)};
+    Object.keys(modelCounts).forEach(function(mk){result[pid][mk]=toSorted(modelCounts[mk]);});
+  });
+  _promptComps=result;
+}
 function renderPrompts(){
-  var bk=BRAND_CFG[currentBrand].key;_pd=D.prompts[bk];
+  var bk=BRAND_CFG[currentBrand].key;_pd=D.prompts[bk];_buildPromptComps(currentBrand);
   document.getElementById('promptsSub').textContent=_pd.length+' prompts tracked · '+(activeModel==='all'?'all models':(MODEL_META[activeModel]||{label:activeModel}).label);
   searchQuery=document.getElementById('promptSearch').value;applyPromptFilter();
 }
 function onPromptSearch(q){searchQuery=q;applyPromptFilter();}
-function setPromptFilter(f,btn){promptFilter=f;document.querySelectorAll('.filter-bar .fb-btn').forEach(x=>x.classList.remove('active'));btn.classList.add('active');applyPromptFilter();}
+function setPromptFilter(f,btn){promptFilter=f;document.querySelectorAll('#panel-prompts .filter-bar .fb-btn').forEach(x=>x.classList.remove('active'));btn.classList.add('active');applyPromptFilter();}
 function applyPromptFilter(){
-  var bk=BRAND_CFG[currentBrand].key;
   var data=_pd.slice();
   if(searchQuery)data=data.filter(function(p){return p.text.toLowerCase().indexOf(searchQuery.toLowerCase())>-1;});
-  if(promptFilter==='mentioned')data=data.filter(function(p){return activeModel==='all'?p.mentions>0:(p.models[activeModel]&&p.models[activeModel].mentioned);});
-  if(promptFilter==='not')data=data.filter(function(p){return activeModel==='all'?p.mentions===0:!(p.models[activeModel]&&p.models[activeModel].mentioned);});
+  if(promptFilter==='mentioned')data=data.filter(function(p){
+    if(activeModel==='all')return Object.values(p.models).some(function(m){return m&&m.mentioned;});
+    return !!(p.models[activeModel]&&p.models[activeModel].mentioned);
+  });
+  if(promptFilter==='not')data=data.filter(function(p){
+    if(activeModel==='all')return !Object.values(p.models).some(function(m){return m&&m.mentioned;});
+    return !(p.models[activeModel]&&p.models[activeModel].mentioned);
+  });
   data=sortPrompts(data);
   var tbody=document.getElementById('promptsTbody');
   if(!data.length){tbody.innerHTML='<tr><td colspan="6" style="text-align:center;padding:32px;color:var(--ink4)">No prompts match filter</td></tr>';return;}
@@ -644,36 +961,23 @@ function applyPromptFilter(){
     var dots=MODEL_ORDER.map(function(mk){
       var mv=p.models[mk];var m=MODEL_META[mk]||{domain:'google.com',label:mk};
       var hit=mv&&mv.mentioned;
-      var isActive=activeModel!=='all'&&activeModel===mk;
       var tip=m.label+': '+(hit?'Mentioned (score '+(mv.score||0)+', rank '+(mv.rank||'none')+')':'Not mentioned');
-      var extraStyle=isActive?'outline:2px solid var(--v);outline-offset:1px;border-radius:4px;':'';
-      return '<div class="mdot-wrap" data-tip="'+tip+'"><img class="mdot-img'+(hit?'':' mdot-miss')+'" src="'+fav(m.domain)+'" style="'+extraStyle+'" onerror="this.src=\'data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==\'"></div>';
+      return '<div class="mdot-wrap" data-tip="'+tip+'"><img class="mdot-img'+(hit?'':' mdot-miss')+'" src="'+fav(m.domain)+'" onerror="this.src=\'data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==\'"></div>';
     }).join('');
-    /* top competitors — per-prompt if available, else top for selected model */
+    /* top competitors from _promptComps */
     var pComps=[];
-    if(activeModel!=='all'){
-      var mr4=p.models[activeModel];
-      if(mr4&&mr4.competitors&&mr4.competitors.length){pComps=mr4.competitors.slice(0,3);}
-    } else {
-      MODEL_ORDER.forEach(function(mk){
-        var mv=p.models[mk];
-        if(mv&&mv.competitors){mv.competitors.forEach(function(pc){var found=pComps.find(function(x){return x.name===pc.name;});if(found){found._cnt=(found._cnt||1)+1;}else{pComps.push(Object.assign({},pc,{_cnt:1}));}});}
-      });
-      pComps.sort(function(a,b){return(b._cnt||1)-(a._cnt||1);});
-      pComps=pComps.slice(0,3);
-    }
+    var pcData=_promptComps[p.id];
+    if(pcData){var pcKey=activeModel==='all'?'all':activeModel;pComps=(pcData[pcKey]||pcData['all']||[]).slice(0,3);}
     if(!pComps.length){
-      var aggC=(D.competitors[bk]||[]).filter(function(c){return!c.isBrand;});
+      var bkC=BRAND_CFG[currentBrand].key;
+      var aggC=(D.competitors[bkC]||[]).filter(function(c){return!c.isBrand;});
       if(activeModel!=='all'){aggC=aggC.filter(function(c){return c.modelMentions&&(c.modelMentions[activeModel]||0)>0;}).sort(function(a,b){return(b.modelMentions[activeModel]||0)-(a.modelMentions[activeModel]||0);});}
-      pComps=aggC.slice(0,3).map(function(c){var cnt=activeModel==='all'?c.mentions:(c.modelMentions&&c.modelMentions[activeModel]||0);return{name:c.name,_aggCount:cnt};});
+      pComps=aggC.slice(0,3).map(function(c){var cnt=activeModel==='all'?c.mentions:(c.modelMentions&&c.modelMentions[activeModel]||0);return{name:c.name,count:cnt};});
     }
     var compIcons=pComps.map(function(pc){
-      var cd=COMP_DOMAINS[pc.name]||(pc.name.toLowerCase().replace(/\s+/g,'')+'.com');
-      var tipLines=[pc.name];
-      if(pc.rank)tipLines.push('Rank #'+pc.rank);
-      if(pc.score)tipLines.push('Score '+pc.score);
-      if(pc._aggCount!=null)tipLines.push(pc._aggCount+' mention'+(pc._aggCount!==1?'s':'')+(activeModel!=='all'?' in '+(MODEL_META[activeModel]||{label:activeModel}).label:''));
-      return '<div class="comp-iw"><img src="'+fav(cd)+'" onerror="this.style.display=\'none\'"><div class="comp-itip">'+tipLines.join(' · ')+'</div></div>';
+      var cd=(typeof COMP_DOMAINS!=='undefined'&&COMP_DOMAINS[pc.name])||(pc.name.toLowerCase().replace(/\s+/g,'')+'.com');
+      var tip=pc.name+(pc.count?' · '+pc.count+' mention'+(pc.count!==1?'s':'')+(activeModel!=='all'?' in '+(MODEL_META[activeModel]||{label:activeModel}).label:''):'');
+      return '<div class="comp-iw"><img src="'+fav(cd)+'" onerror="this.style.display=\'none\'"><div class="comp-itip">'+tip+'</div></div>';
     }).join('');
     if(!compIcons)compIcons='<span style="color:var(--ink4);font-size:11px">-</span>';
     return '<tr><td><div class="pt-text">'+p.text+'</div></td><td>'+visBadge+'</td><td>'+posBadge+'</td><td>'+sentBadge+'</td><td><div class="model-dots">'+dots+'</div></td><td><div class="comp-icons">'+compIcons+'</div></td></tr>';
@@ -683,12 +987,18 @@ function applyPromptFilter(){
 function renderSentiment(){
   var bk=BRAND_CFG[currentBrand].key,s=D.sentiment[bk];
   var mentions=activeModel==='all'?s.mentions:s.mentions.filter(function(m){return m.model===activeModel;});
-  var tileCounts={positive:0,neutral:0,negative:0,uncertain:0};
-  mentions.forEach(function(m){if(tileCounts.hasOwnProperty(m.sentiment))tileCounts[m.sentiment]++;});
+  var tileCounts;
+  if(activeModel==='all'){
+    tileCounts={positive:s.positive||0,neutral:s.neutral||0,negative:s.negative||0,uncertain:s.uncertain||0};
+  } else {
+    tileCounts={positive:0,neutral:0,negative:0,uncertain:0};
+    mentions.forEach(function(m){if(tileCounts.hasOwnProperty(m.sentiment))tileCounts[m.sentiment]++;});
+  }
+  if(sentimentFilter!=='all')mentions=mentions.filter(function(m){return m.sentiment===sentimentFilter;});
   var tiles=[{cls:'spos',num:tileCounts.positive,lbl:'Positive'},{cls:'sneu',num:tileCounts.neutral,lbl:'Neutral'},{cls:'sneg',num:tileCounts.negative,lbl:'Negative'},{cls:'sunc',num:tileCounts.uncertain,lbl:'Uncertain'}].map(function(t){return '<div class="sent-tile '+t.cls+'"><div class="st-num">'+t.num+'</div><div class="st-lbl">'+t.lbl+'</div></div>';}).join('');
   var el=document.getElementById('sentContent');
   if(s.total_mentions===0){el.innerHTML='<div class="sent-tiles">'+tiles+'</div><div class="cc"><div class="cc-body"><div class="no-data"><div class="no-data-icon">&#128202;</div><h3>No mentions detected</h3><p>'+BRAND_CFG[currentBrand].name+' was not mentioned in any of the 30 tracked prompts across 5 AI models. See the Actions tab for steps to achieve first mentions.</p></div></div></div>';return;}
-  if(!mentions.length){el.innerHTML='<div class="sent-tiles">'+tiles+'</div><div class="cc"><div class="cc-body"><div class="no-data"><div class="no-data-icon">&#128269;</div><h3>No mentions for '+(MODEL_META[activeModel]||{label:activeModel}).label+'</h3><p>Switch to "All models" or try Perplexity.</p></div></div></div>';return;}
+  if(!mentions.length){var noDataMsg=sentimentFilter!=='all'?'No '+sentimentFilter+' mentions for this filter. Try a different sentiment or switch to All.':(activeModel==='all'?'No mentions detected for current filter.':'No mentions for '+(MODEL_META[activeModel]||{label:activeModel}).label+'. Switch to "All models" or try Sonar.');el.innerHTML='<div class="sent-tiles">'+tiles+'</div><div class="cc"><div class="cc-body"><div class="no-data"><div class="no-data-icon">&#128269;</div><h3>No matching mentions</h3><p>'+noDataMsg+'</p></div></div></div>';return;}
   var cards=mentions.map(function(mn){
     var mm=MODEL_META[mn.model]||{label:mn.model,domain:'google.com'};
     var comps=(mn.competitors||[]).map(function(c){var cd=COMP_DOMAINS[c]||(c.toLowerCase().replace(/\s/g,'')+'.com');return '<span class="comp-tag" title="'+c+' was also recommended in this AI response"><img src="'+fav(cd,16)+'" style="width:12px;height:12px;border-radius:2px" onerror="this.style.display=\'none\'">'+c+'</span>';}).join('');
@@ -699,56 +1009,20 @@ function renderSentiment(){
 }
 /* competitors */
 function renderCompetitors(){
-  var bk=BRAND_CFG[currentBrand].key,comps=D.competitors[bk].slice();
+  var bk=BRAND_CFG[currentBrand].key,comps=_dedupeComps(D.competitors[bk].slice());
   if(activeModel!=='all')comps=comps.filter(function(c){return c.models&&c.models.indexOf(activeModel)>-1;});
-  var top15=comps.slice(0,15);
-  var max=Math.max.apply(null,top15.map(function(c){return activeModel!=='all'&&c.modelMentions&&c.modelMentions[activeModel]!=null?c.modelMentions[activeModel]:c.mentions;}))||1;
-  var _iSvg='<svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.4"><circle cx="7" cy="7" r="6"/><path d="M7 6v4" stroke-linecap="round"/><circle cx="7" cy="4.5" r=".5" fill="currentColor" stroke="none"/></svg>';
-  var _compRows=top15.map(function(c,i){
-    var isBrand=c.isBrand===true;
+  var max=comps[0]?comps[0].mentions:1;
+  document.getElementById('compList').innerHTML=comps.slice(0,15).map(function(c,i){
     var cd=COMP_DOMAINS[c.name]||(c.name.toLowerCase().replace(/\s/g,'')+'.com');
-    var dispCount=activeModel!=='all'&&c.modelMentions&&c.modelMentions[activeModel]!=null?c.modelMentions[activeModel]:c.mentions;
-    var pct=(dispCount/max*100).toFixed(0);
+    var pct=(c.mentions/max*100).toFixed(0);
     var sdotCls=c.topSentiment==='positive'?'sdot-pos':c.topSentiment==='negative'?'sdot-neg':'sdot-neu';
-    var rankCell=isBrand?'<div class="comp-rank" style="font-size:10px;font-weight:700;letter-spacing:.05em;color:var(--v)">YOU</div>':'<div class="comp-rank">'+i+'</div>';
-    var rowStyle=isBrand?' style="background:var(--surface2);border-radius:6px;margin-bottom:6px;border:1px solid var(--border)"':'';
-    return '<div class="comp-row"'+rowStyle+'>'+rankCell+'<img class="comp-fav" src="'+fav(cd)+'" onerror="this.style.display=\'none\'"><div class="comp-name">'+c.name+'</div><div class="comp-bar-wrap"><div class="comp-bar" style="width:'+pct+'%"></div></div><div class="comp-count">'+dispCount+' mentions</div><div class="comp-score">'+c.avgScore+'</div><div class="sdot '+sdotCls+'" title="'+c.topSentiment+'"></div></div>';
-  }).join('');
-  var _compHdr='<div class="comp-list-hdr"><div class="clh-main"></div><div class="clh-cell clh-mentions">Mentions</div><div class="clh-cell clh-score"><span class="info-tip" data-tip="Average AI visibility score (0-100) when mentioned. Score = ((total entities in response - rank + 1) / total entities) x 100. Higher score = more prominent placement.">'+_iSvg+'</span>Avg Score</div><div style="width:16px"></div></div>';
-  document.getElementById('compList').innerHTML=_compHdr+(_compRows||'<p style="color:var(--ink4);font-size:13px">No competitors for this filter.</p>');
+    return '<div class="comp-row"><div class="comp-rank">'+(i+1)+'</div><img class="comp-fav" src="'+fav(cd)+'" onerror="this.style.display=\'none\'"><div class="comp-name">'+c.name+'</div><div class="comp-bar-wrap"><div class="comp-bar" style="width:'+pct+'%"></div></div><div class="comp-count">'+c.mentions+' mentions</div><div class="comp-score">avg '+c.avgScore+'</div><div class="sdot '+sdotCls+'" title="'+c.topSentiment+'"></div></div>';
+  }).join('')||'<p style="color:var(--ink4);font-size:13px">No competitors for this filter.</p>';
   document.getElementById('compSub').textContent=comps.length+' competitors detected'+(activeModel!=='all'?' for '+(MODEL_META[activeModel]||{label:activeModel}).label:'');
   var top3=comps.slice(0,3);
-  function _cDisp(c){return activeModel!=='all'&&c.modelMentions&&c.modelMentions[activeModel]!=null?c.modelMentions[activeModel]:c.mentions;}
   document.getElementById('compInsight').innerHTML=top3.length?
-    '<div style="margin-bottom:14px"><div class="act-sect-label">Dominant competitors</div><p style="font-size:13px;color:var(--ink2);line-height:1.7;margin-top:6px"><b>'+top3[0].name+'</b> leads with '+_cDisp(top3[0])+' AI mentions at an average score of '+top3[0].avgScore+'.'+(top3[1]?' '+top3[1].name+' ('+_cDisp(top3[1])+' mentions) and '+(top3[2]?top3[2].name+' ('+_cDisp(top3[2])+')':'')+'follow.':'')+'</p></div><div><div class="act-sect-label">By sentiment</div><div style="margin-top:8px;display:flex;flex-direction:column;gap:7px">'+comps.slice(0,7).map(function(c){var cd=COMP_DOMAINS[c.name]||(c.name.toLowerCase().replace(/\s/g,'')+'.com');var col=c.topSentiment==='positive'?'#16a34a':c.topSentiment==='negative'?'#dc2626':'#64748b';return '<div style="display:flex;align-items:center;gap:8px;font-size:12px"><img src="'+fav(cd)+'" style="width:14px;height:14px;border-radius:3px;border:1px solid var(--border)" onerror="this.style.display=\'none\'"><span style="flex:1;color:var(--ink)">'+c.name+'</span><span style="color:'+col+';font-weight:600;font-size:11px">'+c.topSentiment+'</span><span style="color:var(--ink4)">avg '+c.avgScore+'</span></div>';}).join('')+'</div></div>':
+    '<div style="margin-bottom:14px"><div class="act-sect-label">Dominant competitors</div><p style="font-size:13px;color:var(--ink2);line-height:1.7;margin-top:6px"><b>'+top3[0].name+'</b> leads with '+top3[0].mentions+' AI mentions at an average score of '+top3[0].avgScore+'.'+(top3[1]?' '+top3[1].name+' ('+top3[1].mentions+' mentions) and '+(top3[2]?top3[2].name+' ('+top3[2].mentions+')':'')+'follow.':'')+'</p></div><div><div class="act-sect-label">By sentiment</div><div style="margin-top:8px;display:flex;flex-direction:column;gap:7px">'+comps.slice(0,7).map(function(c){var cd=COMP_DOMAINS[c.name]||(c.name.toLowerCase().replace(/\s/g,'')+'.com');var col=c.topSentiment==='positive'?'#16a34a':c.topSentiment==='negative'?'#dc2626':'#64748b';return '<div style="display:flex;align-items:center;gap:8px;font-size:12px"><img src="'+fav(cd)+'" style="width:14px;height:14px;border-radius:3px;border:1px solid var(--border)" onerror="this.style.display=\'none\'"><span style="flex:1;color:var(--ink)">'+c.name+'</span><span style="color:'+col+';font-weight:600;font-size:11px">'+c.topSentiment+'</span><span style="color:var(--ink4)">avg '+c.avgScore+'</span></div>';}).join('')+'</div></div>':
     '<p style="color:var(--ink4);font-size:13px">No data for this filter.</p>';
-}
-function toggleCitDd(){var m=document.getElementById('citCompMenu');if(m)m.classList.toggle('open');}
-document.addEventListener('click',function(e){var dd=document.getElementById('citCompDd');if(dd&&!dd.contains(e.target)){var m=document.getElementById('citCompMenu');if(m)m.classList.remove('open');}});
-function setCitComp(name,btn){
-  activeCitComp=name;
-  var menu=document.getElementById('citCompMenu');
-  if(menu)menu.classList.remove('open');
-  renderCitations();
-}
-function buildUrlListFromArray(urls) {
-  if (!urls || !urls.length) return '<table class="dom-url-table"><tbody><tr><td colspan="5" style="color:var(--ink4);padding:14px;text-align:center">No URLs for this filter.</td></tr></tbody></table>';
-  var rows = urls.map(function(u) {
-    var mchips = (u.models || []).map(function(m) {
-      var mm = MODEL_META[m] || { domain: 'google.com', label: m };
-      return '<span class="mdot-wrap" data-tip="' + mm.label + '"><img class="dom-url-td-mimg" src="' + fav(mm.domain) + '" onerror="this.style.display=\'none\'"></span>';
-    }).join('');
-    var pt = u.pageType ? u.pageType.replace(/_/g, ' ').replace(/\b\w/g, function(x) { return x.toUpperCase(); }) : '<span style="color:var(--ink4)">-</span>';
-    var ct = u.contentType ? u.contentType.replace(/_/g, ' ').replace(/\b\w/g, function(x) { return x.toUpperCase(); }) : '<span style="color:var(--ink4)">-</span>';
-    return '<tr>' +
-      '<td class="dom-url-td-title"><a href="' + u.url + '" target="_blank" rel="noopener" title="' + u.url + '">' + (u.title || u.url).slice(0, 68) + '</a></td>' +
-      '<td class="dom-url-td-cnt tc">' + u.count + '×</td>' +
-      '<td class="tc"><span class="type-badge">' + pt + '</span></td>' +
-      '<td class="tc"><span class="type-badge">' + ct + '</span></td>' +
-      '<td class="tc"><div class="dom-url-td-models">' + mchips + '</div></td>' +
-      '</tr>';
-  }).join('');
-  return '<table class="dom-url-table"><thead><tr><th>URL / Title</th><th class="tc">Cited</th><th class="tc">Page Type</th><th class="tc">Content Type</th><th class="tc">AI Models</th></tr></thead><tbody>' + rows + '</tbody></table>';
 }
 /* citations */
 function buildUrlList(domain,bk){
@@ -793,116 +1067,127 @@ function toggleDomRow(id,domain,bk){
     if(tr)tr.classList.add('dom-row-open');
   }
 }
-function toggleDomRowComp(id, domain, bk, useCompFilter) {
-  var panel = document.getElementById(id);
-  var tr = document.getElementById('tr-' + id);
-  if (panel.classList.contains('open')) {
-    panel.classList.remove('open');
-    if (tr) tr.classList.remove('dom-row-open');
-  } else {
-    if (useCompFilter && typeof COMP_CITS !== 'undefined' && COMP_CITS[bk] && COMP_CITS[bk][activeCitComp] && COMP_CITS[bk][activeCitComp].filter) {
-      var urls = COMP_CITS[bk][activeCitComp].filter(function(u) { return u.domain === domain; });
-      if (activeModel !== 'all') urls = urls.filter(function(u) { return u.models.indexOf(activeModel) > -1; });
-      panel.innerHTML = buildUrlListFromArray(urls);
-    } else {
-      panel.innerHTML = buildUrlList(domain, bk);
-    }
-    panel.classList.add('open');
-    if (tr) tr.classList.add('dom-row-open');
-  }
+var activeCitComp='all';
+function _buildCompCits(bk){
+  var rh=RAW_HISTORY[bk];if(!rh)return{};
+  // First pass: collect all citations per normalized comp key
+  var normData={};
+  (rh.prompts||[]).forEach(function(rp){
+    (rp.entries||[]).forEach(function(e){
+      if(!e.comps||!e.comps.length||!e.srcs||!e.srcs.length)return;
+      e.comps.forEach(function(c){
+        var norm=_normComp(c);
+        if(!normData[norm])normData[norm]={names:{},cits:[]};
+        normData[norm].names[c]=(normData[norm].names[c]||0)+1;
+        e.srcs.forEach(function(s){
+          var existing=normData[norm].cits.find(function(x){return x.url===s.u;});
+          if(existing){existing.count++;if(e.model&&existing.models.indexOf(e.model)===-1)existing.models.push(e.model);}
+          else normData[norm].cits.push({url:s.u,title:s.t,domain:(s.u.match(/https?:\/\/([^\/]+)/)||[])[1]||'',count:1,models:e.model?[e.model]:[],pageType:s.pt,contentType:s.ct});
+        });
+      });
+    });
+  });
+  // Second pass: build result keyed by canonical name (most-mentioned raw name per norm group)
+  var result={};
+  Object.keys(normData).forEach(function(norm){
+    var nd=normData[norm];
+    var canonical=Object.keys(nd.names).reduce(function(best,n){return nd.names[n]>nd.names[best]?n:best;});
+    nd.cits.sort(function(a,b){return b.count-a.count;});
+    result[canonical]=nd.cits;
+    // Also index by norm key for fallback lookup
+    result['__norm__'+norm]=nd.cits;
+  });
+  return result;
 }
+var _compCitsCache={};
+function _getCompCits(bk){if(!_compCitsCache[bk])_compCitsCache[bk]=_buildCompCits(bk);return _compCitsCache[bk];}
+function toggleCitDd(){var m=document.getElementById('citCompMenu');if(m)m.classList.toggle('open');}
+document.addEventListener('click',function(e){var dd=document.getElementById('citCompDd');if(dd&&!dd.contains(e.target)){var m=document.getElementById('citCompMenu');if(m)m.classList.remove('open');}});
+function setCitComp(name,btn){activeCitComp=name;renderCitations();}
 function renderCitations(){
-  var bk=BRAND_CFG[currentBrand].key;
-  var fav_=function(d,s){return'https://www.google.com/s2/favicons?domain='+d+'&sz='+(s||32);};
-  var allComps=(D.competitors[bk]||[]).filter(function(c){return!c.isBrand&&COMP_DOMAINS[c.name]&&c.mentions>=2;}).slice(0,12);
-  var chevDdSvg='<svg class="cit-dd-chev" viewBox="0 0 10 6" fill="none" stroke="currentColor" stroke-width="1.5" width="10" height="6"><path d="M1 1l4 4 4-4"/></svg>';
-  var activeCd=activeCitComp==='all'?null:(COMP_DOMAINS[activeCitComp]||(activeCitComp.toLowerCase().replace(/\s+/g,'')+'.com'));
-  var triggerContent=(activeCd?'<img src="'+fav_(activeCd)+'" onerror="this.style.display=\'none\'">':'')+'<span>'+(activeCitComp==='all'?'All Citations':activeCitComp)+'</span>'+chevDdSvg;
+  var bk=BRAND_CFG[currentBrand].key,c;
+  /* base citation data */
+  if(activeModel!=='all'&&D.modelCitations&&D.modelCitations[bk]&&D.modelCitations[bk][activeModel]){
+    c=Object.assign({},D.modelCitations[bk][activeModel]);
+    c.uniqueDomains=c.topDomains?c.topDomains.length:D.citations[bk].uniqueDomains;
+    c.topListicles=D.citations[bk].topListicles;
+  } else c=D.citations[bk];
+  /* competitor filter setup */
+  var compCits=_getCompCits(currentBrand);
+  var useCompFilter=activeCitComp!=='all'&&(compCits[activeCitComp]||compCits['__norm__'+_normComp(activeCitComp)]);
+  var chevDdSvg='<svg viewBox="0 0 10 6" fill="none" stroke="currentColor" stroke-width="1.5" style="width:10px;height:10px;flex-shrink:0"><path d="M1 1l4 4 4-4"/></svg>';
+  var allComps=_dedupeComps((D.competitors[bk]||[]).filter(function(cp){return!cp.isBrand;})).slice(0,15);
+  var activeCd=activeCitComp==='all'?null:(COMP_DOMAINS&&COMP_DOMAINS[activeCitComp])||(activeCitComp.toLowerCase().replace(/\s+/g,'')+'.com');
+  var triggerContent=(activeCd?'<img src="'+fav(activeCd)+'" onerror="this.style.display=\'none\'">':'')+'<span>'+(activeCitComp==='all'?'All Citations':activeCitComp)+'</span>'+chevDdSvg;
   var ddOpts='<div class="cit-comp-opt'+(activeCitComp==='all'?' active':'')+'" onclick="setCitComp(\'all\',this)">All Citations</div>';
   ddOpts+=allComps.map(function(comp){
-    var cd=COMP_DOMAINS[comp.name]||(comp.name.toLowerCase().replace(/\s+/g,'')+'.com');
     var isActive=activeCitComp===comp.name;
-    return '<div class="cit-comp-opt'+(isActive?' active':'')+'" onclick="setCitComp(\''+comp.name.replace(/'/g,"\\'").replace(/"/g,'&quot;')+'\',this)"><img src="'+fav_(cd)+'" onerror="this.style.display=\'none\'">'+comp.name+'</div>';
+    var cd=(COMP_DOMAINS&&COMP_DOMAINS[comp.name])||(comp.name.toLowerCase().replace(/\s+/g,'')+'.com');
+    return '<div class="cit-comp-opt'+(isActive?' active':'')+'" onclick="setCitComp(\''+comp.name.replace(/'/g,"\\'").replace(/"/g,'&quot;')+'\',this)"><img src="'+fav(cd)+'" onerror="this.style.display=\'none\'">'+comp.name+'</div>';
   }).join('');
   var filterBar='<div class="cit-comp-bar"><span class="cit-comp-label">Filter by competitor</span><div class="cit-comp-dd" id="citCompDd"><button class="cit-comp-trigger" onclick="toggleCitDd()">'+triggerContent+'</button><div class="cit-comp-menu" id="citCompMenu">'+ddOpts+'</div></div></div>';
-  var c;
-  var useCompFilter=activeCitComp!=='all'&&typeof COMP_CITS!=='undefined'&&COMP_CITS[bk]&&COMP_CITS[bk][activeCitComp];
-  if(useCompFilter){
-    var compUrls=COMP_CITS[bk][activeCitComp];
-    if(activeModel!=='all'){
-      compUrls=compUrls.filter(function(u){return u.models.indexOf(activeModel)>-1;});
-    }
-    var dtCounts={};var ctCounts={};var domainCounts={};var domainUrlMap={};
-    compUrls.forEach(function(u){
-      dtCounts[u.pageType]=(dtCounts[u.pageType]||0)+u.count;
-      ctCounts[u.contentType]=(ctCounts[u.contentType]||0)+u.count;
-      domainCounts[u.domain]=(domainCounts[u.domain]||0)+u.count;
-      if(!domainUrlMap[u.domain])domainUrlMap[u.domain]=[];
-      domainUrlMap[u.domain].push(u);
+  /* compute domain/content type bars, possibly filtered by competitor */
+  var compUrls=useCompFilter?(compCits[activeCitComp]||compCits['__norm__'+_normComp(activeCitComp)]):null;
+  var domainCounts={},contentCounts={},typeCounts={};
+  if(useCompFilter&&compUrls){
+    compUrls.forEach(function(cu){
+      domainCounts[cu.domain]=(domainCounts[cu.domain]||0)+cu.count;
+      if(cu.pageType)typeCounts[cu.pageType]=(typeCounts[cu.pageType]||0)+cu.count;
+      if(cu.contentType)contentCounts[cu.contentType]=(contentCounts[cu.contentType]||0)+cu.count;
     });
-    var total=compUrls.reduce(function(s,u){return s+u.count;},0);
-    var domainTypes=Object.keys(dtCounts).map(function(t){return{type:t,count:dtCounts[t]};}).sort(function(a,b){return b.count-a.count;});
-    var contentTypes=Object.keys(ctCounts).map(function(t){return{type:t,count:ctCounts[t]};}).sort(function(a,b){return b.count-a.count;});
-    var topDomains=Object.keys(domainCounts).map(function(d){return{domain:d,count:domainCounts[d]};}).sort(function(a,b){return b.count-a.count;}).slice(0,20);
-    var topListicles=[];
-    compUrls.forEach(function(u){if(u.contentType==='listicle_roundup')topListicles.push({domain:u.domain,title:u.title,url:u.url,count:u.count});});
-    topListicles.sort(function(a,b){return b.count-a.count;});topListicles=topListicles.slice(0,8);
-    c={total:total,uniqueDomains:Object.keys(domainCounts).length,domainTypes:domainTypes,contentTypes:contentTypes,topDomains:topDomains,topListicles:topListicles,_domainUrlMap:domainUrlMap};
-  } else {
-    if(activeModel!=='all'&&D.modelCitations&&D.modelCitations[bk]&&D.modelCitations[bk][activeModel]){
-      c=Object.assign({},D.modelCitations[bk][activeModel]);
-      c.uniqueDomains=c.topDomains?c.topDomains.length:D.citations[bk].uniqueDomains;
-      c.topListicles=D.citations[bk].topListicles;
-    } else c=D.citations[bk];
-    c._domainUrlMap=null;
+    var tdt=Object.values(typeCounts).reduce(function(a,b){return a+b;},0)||1;
+    var tct=Object.values(contentCounts).reduce(function(a,b){return a+b;},0)||1;
+    var dtSorted=Object.keys(typeCounts).map(function(k){return{type:k,count:typeCounts[k]};}).sort(function(a,b){return b.count-a.count;});
+    var ctSorted=Object.keys(contentCounts).map(function(k){return{type:k,count:contentCounts[k]};}).sort(function(a,b){return b.count-a.count;});
+    var dtBars=dtSorted.map(function(dt){var p=(dt.count/tdt*100).toFixed(1);var l=dt.type.replace(/_/g,' ').replace(/\b\w/g,function(ch){return ch.toUpperCase();});return '<div class="bar-row"><div class="bar-label">'+l+'</div><div class="bar-track"><div class="bar-fill" style="width:'+p+'%"></div></div><div class="bar-pct">'+p+'%</div><div class="bar-cnt">'+dt.count+'</div></div>';}).join('')||'<p style="color:var(--ink4);font-size:13px;padding:12px">No data for this filter.</p>';
+    var ctBars=ctSorted.slice(0,10).map(function(ct){var p=(ct.count/tct*100).toFixed(1);var l=ct.type.replace(/_/g,' ').replace(/\b\w/g,function(ch){return ch.toUpperCase();});return '<div class="bar-row"><div class="bar-label">'+l+'</div><div class="bar-track"><div class="bar-fill" style="width:'+p+'%"></div></div><div class="bar-pct">'+p+'%</div><div class="bar-cnt">'+ct.count+'</div></div>';}).join('')||'<p style="color:var(--ink4);font-size:13px;padding:12px">No data for this filter.</p>';
+    var compTopDomains=Object.keys(domainCounts).map(function(d){return{domain:d,count:domainCounts[d]};}).sort(function(a,b){return b.count-a.count;}).slice(0,20);
+    var totalComp=compUrls.reduce(function(s,cu){return s+cu.count;},0);
+    var chevSvg2='<svg class="dom-chev" viewBox="0 0 10 6" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M1 1l4 4 4-4"/></svg>';
+    var domRows=compTopDomains.map(function(d,i){
+      var t=typeof DCAT!=='undefined'&&DCAT&&DCAT[d.domain]?DCAT[d.domain]:'AI/SaaS Blog';
+      return '<tr><td style="color:var(--ink4);font-size:12px;width:24px">'+(i+1)+'</td><td style="display:flex;align-items:center"><img class="dom-fav" src="'+fav(d.domain)+'" onerror="this.style.display=\'none\'" style="margin-right:5px"><b>'+d.domain+'</b></td><td><span class="type-badge">'+t+'</span></td><td style="text-align:right;font-weight:600;color:var(--v)">'+d.count+'</td></tr>';
+    }).join('');
+    document.getElementById('citContent').innerHTML=
+      filterBar+
+      '<div class="two-col">'+
+        '<div class="cc"><div class="cc-head"><div class="cc-title">Page Type</div><div class="cc-sub">'+totalComp.toLocaleString()+' citations with '+activeCitComp+'</div></div><div class="cc-body">'+dtBars+'</div></div>'+
+        '<div class="cc"><div class="cc-head"><div class="cc-title">Content Type</div><div class="cc-sub">when '+activeCitComp+' is mentioned</div></div><div class="cc-body">'+ctBars+'</div></div>'+
+      '</div>'+
+      '<div class="cc"><div class="cc-head"><div class="cc-title">Top Cited Domains</div><div class="cc-sub">co-occurring with '+activeCitComp+' mentions</div></div>'+
+        '<div class="cc-body np"><table class="dom-table"><thead><tr><th>#</th><th>Domain</th><th>Domain Type</th><th style="text-align:right">Citations</th></tr></thead><tbody>'+domRows+'</tbody></table></div>'+
+      '</div>';
+    return;
   }
+  /* default (all citations) path */
   var tdt=c.domainTypes.reduce(function(a,x){return a+x.count;},0);
   var tct=c.contentTypes.reduce(function(a,x){return a+x.count;},0);
-  var dtBars=c.domainTypes.map(function(dt){
-    var p=(dt.count/tdt*100).toFixed(1);
-    var l=dt.type.replace(/_/g,' ').replace(/\b\w/g,function(c){return c.toUpperCase();});
-    return '<div class="bar-row"><div class="bar-label">'+l+'</div><div class="bar-track"><div class="bar-fill" style="width:'+p+'%"></div></div><div class="bar-pct">'+p+'%</div><div class="bar-cnt">'+dt.count+'</div></div>';
-  }).join('');
-  var ctBars=c.contentTypes.slice(0,10).map(function(ct){
-    var p=(ct.count/tct*100).toFixed(1);
-    var l=ct.type.replace(/_/g,' ').replace(/\b\w/g,function(c){return c.toUpperCase();});
-    return '<div class="bar-row"><div class="bar-label">'+l+'</div><div class="bar-track"><div class="bar-fill" style="width:'+p+'%"></div></div><div class="bar-pct">'+p+'%</div><div class="bar-cnt">'+ct.count+'</div></div>';
-  }).join('');
+  var dtBars=c.domainTypes.map(function(dt){var p=(dt.count/tdt*100).toFixed(1);var l=dt.type.replace(/_/g,' ').replace(/\b\w/g,function(ch){return ch.toUpperCase();});return '<div class="bar-row"><div class="bar-label">'+l+'</div><div class="bar-track"><div class="bar-fill" style="width:'+p+'%"></div></div><div class="bar-pct">'+p+'%</div><div class="bar-cnt">'+dt.count+'</div></div>';}).join('');
+  var ctBars=c.contentTypes.slice(0,10).map(function(ct){var p=(ct.count/tct*100).toFixed(1);var l=ct.type.replace(/_/g,' ').replace(/\b\w/g,function(ch){return ch.toUpperCase();});return '<div class="bar-row"><div class="bar-label">'+l+'</div><div class="bar-track"><div class="bar-fill" style="width:'+p+'%"></div></div><div class="bar-pct">'+p+'%</div><div class="bar-cnt">'+ct.count+'</div></div>';}).join('');
   var chevSvg='<svg class="dom-chev" viewBox="0 0 10 6" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M1 1l4 4 4-4"/></svg>';
   var domRows=c.topDomains.slice(0,20).map(function(d,i){
-    var t=DCAT&&DCAT[d.domain]?DCAT[d.domain]:'AI/SaaS Blog';
+    var t=typeof DCAT!=='undefined'&&DCAT&&DCAT[d.domain]?DCAT[d.domain]:'AI/SaaS Blog';
     var panelId='dup-'+currentBrand+'-'+i;
-    var hasUrls;
-    if(useCompFilter&&c._domainUrlMap&&c._domainUrlMap[d.domain]){
-      hasUrls=true;
-    } else {
-      hasUrls=DURL[bk]&&DURL[bk][d.domain]&&DURL[bk][d.domain].length>0;
-    }
+    var hasUrls=DURL[bk]&&DURL[bk][d.domain]&&DURL[bk][d.domain].length>0;
     var domCell=hasUrls
-      ?'<td onclick="toggleDomRowComp(\''+panelId+'\',\''+d.domain+'\',\''+bk+'\','+useCompFilter+')" class="dom-row-clickable" style="display:flex;align-items:center">'+chevSvg+'<img class="dom-fav" src="'+fav(d.domain)+'" onerror="this.style.display=\'none\'" style="margin-right:5px"><b>'+d.domain+'</b></td>'
+      ?'<td onclick="toggleDomRow(\''+panelId+'\',\''+d.domain+'\',\''+bk+'\')" class="dom-row-clickable" style="display:flex;align-items:center">'+chevSvg+'<img class="dom-fav" src="'+fav(d.domain)+'" onerror="this.style.display=\'none\'" style="margin-right:5px"><b>'+d.domain+'</b></td>'
       :'<td style="display:flex;align-items:center"><img class="dom-fav" src="'+fav(d.domain)+'" onerror="this.style.display=\'none\'" style="margin-right:5px"><b>'+d.domain+'</b></td>';
-    return '<tr id="tr-'+panelId+'"><td style="color:var(--ink4);font-size:12px;width:24px">'+(i+1)+'</td>'+
-      domCell+
-      '<td><span class="type-badge">'+t+'</span></td>'+
-      '<td style="text-align:right;font-weight:600;color:var(--v)">'+d.count+'</td></tr>'+
+    return '<tr id="tr-'+panelId+'"><td style="color:var(--ink4);font-size:12px;width:24px">'+(i+1)+'</td>'+domCell+'<td><span class="type-badge">'+t+'</span></td><td style="text-align:right;font-weight:600;color:var(--v)">'+d.count+'</td></tr>'+
       '<tr class="dom-expand-row"><td colspan="4"><div class="dom-url-panel" id="'+panelId+'"></div></td></tr>';
   }).join('');
   var ltRows=(c.topListicles||[]).slice(0,8).map(function(l){
     return '<tr><td><img class="dom-fav" src="'+fav(l.domain)+'" onerror="this.style.display=\'none\'"><b>'+l.domain+'</b></td><td style="font-size:12px;color:var(--ink3)">'+l.title.slice(0,62)+'</td><td style="text-align:right;font-weight:600;color:var(--v)">'+l.count+'x</td></tr>';
   }).join('');
-  var subLabel=useCompFilter
-    ?'Citations co-occurring with '+activeCitComp+' mentions'+(activeModel!=='all'?' · '+(MODEL_META[activeModel]||{label:activeModel}).label:'')
-    :(c.uniqueDomains||'')+' unique domains'+(activeModel!=='all'?' for '+(MODEL_META[activeModel]||{label:activeModel}).label:'');
   document.getElementById('citContent').innerHTML=
     filterBar+
     '<div class="two-col">'+
-      '<div class="cc"><div class="cc-head"><div class="cc-title">Page Type</div><div class="cc-sub">'+(useCompFilter?c.total:tdt).toLocaleString()+' citations'+(useCompFilter?' with '+activeCitComp:'')+'</div></div><div class="cc-body">'+(dtBars||'<p style="color:var(--ink4);font-size:13px;padding:12px">No data for this filter.</p>')+'</div></div>'+
-      '<div class="cc"><div class="cc-head"><div class="cc-title">Content Type</div><div class="cc-sub">'+(useCompFilter?'when '+activeCitComp+' is mentioned':'how AI sources are classified')+'</div></div><div class="cc-body">'+(ctBars||'<p style="color:var(--ink4);font-size:13px;padding:12px">No data for this filter.</p>')+'</div></div>'+
+      '<div class="cc"><div class="cc-head"><div class="cc-title">Page Type</div><div class="cc-sub">'+tdt.toLocaleString()+' total citations</div></div><div class="cc-body">'+dtBars+'</div></div>'+
+      '<div class="cc"><div class="cc-head"><div class="cc-title">Content Type</div><div class="cc-sub">how AI sources are classified</div></div><div class="cc-body">'+ctBars+'</div></div>'+
     '</div>'+
-    '<div class="cc"><div class="cc-head"><div class="cc-title">Top 20 Cited Domains</div><div class="cc-sub">'+subLabel+'</div></div>'+
+    '<div class="cc"><div class="cc-head"><div class="cc-title">Top 20 Cited Domains</div><div class="cc-sub">'+(c.uniqueDomains||'')+' unique domains'+(activeModel!=='all'?' for '+(MODEL_META[activeModel]||{label:activeModel}).label:'')+'</div></div>'+
       '<div class="cc-body np"><table class="dom-table"><thead><tr><th>#</th><th>Domain</th><th>Domain Type</th><th style="text-align:right">Citations</th></tr></thead><tbody>'+domRows+'</tbody></table></div>'+
     '</div>'+
-    (ltRows?'<div class="cc"><div class="cc-head"><div class="cc-title">Top Listicle Articles</div><div class="cc-sub">'+(useCompFilter?'in '+activeCitComp+' responses':'highest-priority inclusion targets')+'</div></div><div class="cc-body np"><table class="dom-table"><thead><tr><th>Domain</th><th>Article</th><th style="text-align:right">Cited</th></tr></thead><tbody>'+ltRows+'</tbody></table></div></div>':'');
+    (ltRows?'<div class="cc"><div class="cc-head"><div class="cc-title">Top Listicle Articles</div><div class="cc-sub">highest-priority inclusion targets</div></div><div class="cc-body np"><table class="dom-table"><thead><tr><th>Domain</th><th>Article</th><th style="text-align:right">Cited</th></tr></thead><tbody>'+ltRows+'</tbody></table></div></div>':'');
 }
 /* actions */
 function setActFilter(f,btn){actFilter=f;document.querySelectorAll('.act-fb').forEach(x=>x.classList.remove('active'));btn.classList.add('active');renderActionsGrid();}
@@ -937,6 +1222,7 @@ function renderActionsGrid(){
   }).join('');
 }
 function toggleAct(id){var card=document.getElementById(id);var wasCollapsed=card.classList.contains('collapsed');document.querySelectorAll('.act-card').forEach(function(c){c.classList.add('collapsed');});if(wasCollapsed)card.classList.remove('collapsed');}
+_applyTimeRange();
 renderAll();
 </script>
 </body>
