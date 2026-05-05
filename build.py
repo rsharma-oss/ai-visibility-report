@@ -513,12 +513,13 @@ def process_brand_data(api_key, brand_cfg):
         durl_brand[domain] = urls_sorted
 
     # ── Competitors aggregation ──────────────────────────────────────────────
-    comp_data = defaultdict(lambda: {"mentions": 0, "scores": [], "models": set(), "sentiments": []})
+    comp_data = defaultdict(lambda: {"mentions": 0, "scores": [], "models": set(), "sentiments": [], "model_counts": defaultdict(int)})
     for name, etype, model_key in all_entities:
         if not name:
             continue
         comp_data[name]["mentions"] += 1
         comp_data[name]["models"].add(model_key)
+        comp_data[name]["model_counts"][model_key] += 1
 
     competitors_out = []
     for name, info in comp_data.items():
@@ -527,6 +528,7 @@ def process_brand_data(api_key, brand_cfg):
         competitors_out.append({
             "name": name,
             "mentions": info["mentions"],
+            "modelMentions": dict(info["model_counts"]),
             "avgScore": 0,
             "topSentiment": top_sent,
             "models": sorted(info["models"]),

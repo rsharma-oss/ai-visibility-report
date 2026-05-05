@@ -372,7 +372,7 @@ function renderOverview(){
   var compFiltered=activeModel==='all'?comps:comps.filter(function(c){return c.models&&c.models.indexOf(activeModel)>-1;});
   var top8=compFiltered.slice(0,8);
   var compLabels=top8.map(function(c){return c.name;});
-  var compData=top8.map(function(c){return c.mentions;});
+  var compData=top8.map(function(c){return activeModel!=='all'&&c.modelMentions&&c.modelMentions[activeModel]!=null?c.modelMentions[activeModel]:c.mentions;});
   /* sentiment breakdown */
   var sMentions=activeModel==='all'?s.mentions:s.mentions.filter(function(m){return m.model===activeModel;});
   var sentCounts={positive:0,neutral:0,negative:0,uncertain:0};
@@ -403,10 +403,11 @@ function renderOverview(){
     return {icon:mm.domain,label:mm.label,val:covData[modelKeys.indexOf(k)],sub:covData[modelKeys.indexOf(k)]+' / '+pd.length};
   });
   /* competitor items */
-  var compMax=compData[0]||1;
+  var compMax=Math.max.apply(null,top8.map(function(c){return activeModel!=='all'&&c.modelMentions&&c.modelMentions[activeModel]!=null?c.modelMentions[activeModel]:c.mentions;}))||1;
   var compItems=top8.map(function(c){
     var cd=COMP_DOMAINS[c.name]||(c.name.toLowerCase().replace(/\s/g,'')+'.com');
-    return {icon:cd,label:c.name,val:c.mentions,sub:c.mentions+' mentions'};
+    var dispCount=activeModel!=='all'&&c.modelMentions&&c.modelMentions[activeModel]!=null?c.modelMentions[activeModel]:c.mentions;
+    return {icon:cd,label:c.name,val:dispCount,sub:dispCount+(activeModel!=='all'?' mentions':' total mentions')};
   });
   /* top domain items */
   var topDom=((mc&&mc.topDomains)||cit.topDomains).slice(0,8);
@@ -630,12 +631,14 @@ function renderSentiment(){
 function renderCompetitors(){
   var bk=BRAND_CFG[currentBrand].key,comps=D.competitors[bk].slice();
   if(activeModel!=='all')comps=comps.filter(function(c){return c.models&&c.models.indexOf(activeModel)>-1;});
-  var max=comps[0]?comps[0].mentions:1;
-  document.getElementById('compList').innerHTML=comps.slice(0,15).map(function(c,i){
+  var top15=comps.slice(0,15);
+  var max=Math.max.apply(null,top15.map(function(c){return activeModel!=='all'&&c.modelMentions&&c.modelMentions[activeModel]!=null?c.modelMentions[activeModel]:c.mentions;}))||1;
+  document.getElementById('compList').innerHTML=top15.map(function(c,i){
     var cd=COMP_DOMAINS[c.name]||(c.name.toLowerCase().replace(/\s/g,'')+'.com');
-    var pct=(c.mentions/max*100).toFixed(0);
+    var dispCount=activeModel!=='all'&&c.modelMentions&&c.modelMentions[activeModel]!=null?c.modelMentions[activeModel]:c.mentions;
+    var pct=(dispCount/max*100).toFixed(0);
     var sdotCls=c.topSentiment==='positive'?'sdot-pos':c.topSentiment==='negative'?'sdot-neg':'sdot-neu';
-    return '<div class="comp-row"><div class="comp-rank">'+(i+1)+'</div><img class="comp-fav" src="'+fav(cd)+'" onerror="this.style.display=\'none\'"><div class="comp-name">'+c.name+'</div><div class="comp-bar-wrap"><div class="comp-bar" style="width:'+pct+'%"></div></div><div class="comp-count">'+c.mentions+' mentions</div><div class="comp-score">avg '+c.avgScore+'</div><div class="sdot '+sdotCls+'" title="'+c.topSentiment+'"></div></div>';
+    return '<div class="comp-row"><div class="comp-rank">'+(i+1)+'</div><img class="comp-fav" src="'+fav(cd)+'" onerror="this.style.display=\'none\'"><div class="comp-name">'+c.name+'</div><div class="comp-bar-wrap"><div class="comp-bar" style="width:'+pct+'%"></div></div><div class="comp-count">'+dispCount+' mentions</div><div class="comp-score">avg '+c.avgScore+'</div><div class="sdot '+sdotCls+'" title="'+c.topSentiment+'"></div></div>';
   }).join('')||'<p style="color:var(--ink4);font-size:13px">No competitors for this filter.</p>';
   document.getElementById('compSub').textContent=comps.length+' competitors detected'+(activeModel!=='all'?' for '+(MODEL_META[activeModel]||{label:activeModel}).label:'');
   var top3=comps.slice(0,3);

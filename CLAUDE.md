@@ -172,6 +172,7 @@ These apply every time you build or debug a report. They prevent the most common
 - `brandMentions[]` in history entries only contains entities that AI Peekaboo has tracked. The full AI response (`fullResponse`) always contains additional competitor agency names that are not in the tracked list.
 - `build.py` already runs a fullResponse regex extraction pass in addition to brandMentions. If you are debugging low competitor counts, verify this pass is running and the `_extract_patterns` list covers markdown bold (`**Name:**`), bullet lists, numbered lists, and inline colon patterns.
 - Filter out generic tools/platforms (Google, YouTube, ChatGPT, Semrush, Shopify, sortlist directories, etc.) from extracted names — these are not competitors.
+- Each competitor object in `competitors_out` must include a `modelMentions` key: a dict mapping model key → mention count for that model (e.g. `{"sonar": 18, "gpt-4o-mini": 15, ...}`). If this key is absent, the model filter in the competitor bars (`renderOverview()` and `renderCompetitors()`) will always show total counts instead of per-model counts and appear unresponsive to model selection. The `comp_data` accumulator in `process_brand_data()` tracks these via `model_counts: defaultdict(int)`, incremented on every entity append.
 
 ### Sentiment context
 - The `context` field in each sentiment mention must come from a window of `fullResponse` text centred on the brand mention, not from `responseSnippet` (which is capped at 200 chars).
