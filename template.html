@@ -361,6 +361,7 @@ function renderOverview(){
   var s=D.sentiment[bk];
   var comps=D.competitors[bk];
   var cit=D.citations[bk];
+  var mc=activeModel!=='all'&&D.modelCitations&&D.modelCitations[bk]&&D.modelCitations[bk][activeModel]?D.modelCitations[bk][activeModel]:null;
   /* model coverage: how many prompts each model mentions the brand */
   var modelKeys=Object.keys(MODEL_META);
   var covLabels=modelKeys.map(function(k){return MODEL_META[k].label;});
@@ -377,11 +378,11 @@ function renderOverview(){
   var sentCounts={positive:0,neutral:0,negative:0,uncertain:0};
   sMentions.forEach(function(m){if(sentCounts.hasOwnProperty(m.sentiment))sentCounts[m.sentiment]++;});
   /* content type top 6 */
-  var ct=cit.contentTypes.slice(0,6);
+  var ct=((mc&&mc.contentTypes)||cit.contentTypes).slice(0,6);
   var ctLabels=ct.map(function(x){return x.type.replace(/_/g,' ').replace(/\b\w/g,function(c){return c.toUpperCase();});});
   var ctData=ct.map(function(x){return x.count;});
   /* page type */
-  var dt=cit.domainTypes.slice(0,6);
+  var dt=((mc&&mc.domainTypes)||cit.domainTypes).slice(0,6);
   var dtLabels=dt.map(function(x){return x.type.replace(/_/g,' ').replace(/\b\w/g,function(c){return c.toUpperCase();});});
   var dtData=dt.map(function(x){return x.count;});
   /* build HTML bar rows helper */
@@ -408,7 +409,7 @@ function renderOverview(){
     return {icon:cd,label:c.name,val:c.mentions,sub:c.mentions+' mentions'};
   });
   /* top domain items */
-  var topDom=cit.topDomains.slice(0,8);
+  var topDom=((mc&&mc.topDomains)||cit.topDomains).slice(0,8);
   var domMax=topDom[0]?topDom[0].count:1;
   var domItems=topDom.map(function(d){
     return {icon:d.domain,label:d.domain,val:d.count,sub:d.count+' citations'};
@@ -421,11 +422,11 @@ function renderOverview(){
     '</div>'+
     '<div class="two-col" style="margin-bottom:14px">'+
       '<div class="cc"><div class="cc-head"><div class="cc-title">Sentiment Breakdown</div><div class="cc-sub">'+sMentions.length+' brand mention'+(sMentions.length!==1?'s':'')+' analysed</div></div><div class="cc-body" style="height:210px;position:relative"><canvas id="ov-sent"></canvas></div></div>'+
-      '<div class="cc"><div class="cc-head"><div class="cc-title">Content Type Distribution</div><div class="cc-sub">how AI citation sources are classified</div></div><div class="cc-body" style="height:210px;position:relative"><canvas id="ov-ct"></canvas></div></div>'+
+      '<div class="cc"><div class="cc-head"><div class="cc-title">Content Type Distribution</div><div class="cc-sub">'+(activeModel!=='all'?(MODEL_META[activeModel]||{label:activeModel}).label+' · ':'')+'how AI citation sources are classified</div></div><div class="cc-body" style="height:210px;position:relative"><canvas id="ov-ct"></canvas></div></div>'+
     '</div>'+
     '<div class="two-col">'+
-      '<div class="cc"><div class="cc-head"><div class="cc-title">Page Type Distribution</div><div class="cc-sub">structure of pages AI models cite most</div></div><div class="cc-body" style="height:210px;position:relative"><canvas id="ov-dt"></canvas></div></div>'+
-      '<div class="cc"><div class="cc-head"><div class="cc-title">Top Cited Domains</div><div class="cc-sub">leading citation sources</div></div><div class="cc-body"><div class="ov-bar-wrap">'+ovBars(domItems,domMax,'ov-violet')+'</div></div></div>'+
+      '<div class="cc"><div class="cc-head"><div class="cc-title">Page Type Distribution</div><div class="cc-sub">'+(activeModel!=='all'?(MODEL_META[activeModel]||{label:activeModel}).label+' · ':'')+'structure of pages AI models cite most</div></div><div class="cc-body" style="height:210px;position:relative"><canvas id="ov-dt"></canvas></div></div>'+
+      '<div class="cc"><div class="cc-head"><div class="cc-title">Top Cited Domains</div><div class="cc-sub">'+(activeModel!=='all'?(MODEL_META[activeModel]||{label:activeModel}).label+' · ':'')+'leading citation sources</div></div><div class="cc-body"><div class="ov-bar-wrap">'+ovBars(domItems,domMax,'ov-violet')+'</div></div></div>'+
     '</div>';
   /* bar fill colors */
   var styleId='ov-bar-style';

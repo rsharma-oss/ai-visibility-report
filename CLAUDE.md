@@ -183,6 +183,29 @@ These apply every time you build or debug a report. They prevent the most common
 - Every `signals` entry must reference a real number from the brand's actual data (citation counts, visibility percentages, competitor mention counts).
 - Every `steps` entry that names a domain must use a domain that actually appears in the brand's citation data — not a generic example.
 
+### Overview tab: model filter wiring rule
+
+`renderOverview()` in `template.html` must wire its per-model citation charts to `D.modelCitations[bk][activeModel]`, not to the global `D.citations[bk]` object. Specifically:
+
+- **Top Cited Domains** — must use `((mc&&mc.topDomains)||cit.topDomains).slice(0,8)`
+- **Content Type Distribution** — must use `((mc&&mc.contentTypes)||cit.contentTypes).slice(0,6)`
+- **Page Type Distribution** — must use `((mc&&mc.domainTypes)||cit.domainTypes).slice(0,6)`
+
+Where `mc` is resolved at the top of `renderOverview()` as:
+```js
+var mc = activeModel !== 'all' && D.modelCitations && D.modelCitations[bk] && D.modelCitations[bk][activeModel]
+  ? D.modelCitations[bk][activeModel] : null;
+```
+
+The fallback to global `cit` is intentional — when `activeModel === 'all'` or the per-model data is absent, global totals are shown.
+
+Each of these three card sub-labels must also show the active model name when a filter is active. Use the same pattern as the Competitor Mentions card:
+```js
++(activeModel!=='all'?(MODEL_META[activeModel]||{label:activeModel}).label+' · ':'')+
+```
+
+`renderCitations()` already uses this pattern correctly. When editing `renderOverview()`, make sure all three citation chart sections follow the same wiring. If you add a new per-model data field (e.g. top listicles per model), apply the same `(mc&&mc.field)||cit.field` fallback pattern.
+
 ### Header HTML (when injecting into template)
 - Brand toggle button: must use the brand's own domain for the Google favicon (`https://www.google.com/s2/favicons?domain={brand_domain}&sz=32`), not any template brand domain.
 - Report date in `.h-meta`: must match the actual month/year the report was generated.
