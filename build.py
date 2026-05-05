@@ -70,6 +70,32 @@ def call_llm(provider, api_key, model, system_prompt, user_prompt, base_url=None
         result = subprocess.run(cmd, input=full_prompt, capture_output=True, text=True, check=True)
         return result.stdout.strip()
 
+    # Try native anthropic SDK first for "anthropic" provider (avoids OpenAI compat layer issues)
+    if provider == "anthropic":
+        try:
+            import anthropic as _anthropic
+            _client = _anthropic.Anthropic(api_key=api_key)
+            _model = model or "claude-sonnet-4-6"
+            for attempt in range(3):
+                try:
+                    _resp = _client.messages.create(
+                        model=_model,
+                        max_tokens=4096,
+                        system=system_prompt,
+                        messages=[{"role": "user", "content": user_prompt}],
+                    )
+                    return _resp.content[0].text.strip()
+                except Exception as e:
+                    if "rate_limit" in str(e).lower() or "429" in str(e):
+                        wait = 30 * (attempt + 1)
+                        print(f"  Rate limit hit, waiting {wait}s before retry {attempt+1}/3...")
+                        time.sleep(wait)
+                    else:
+                        raise
+            raise RuntimeError("LLM call failed after 3 retries")
+        except ImportError:
+            pass  # fall through to openai compat
+
     try:
         from openai import OpenAI
     except ImportError:
@@ -81,15 +107,25 @@ def call_llm(provider, api_key, model, system_prompt, user_prompt, base_url=None
     extra_headers = pconf.get("extra_headers", {})
 
     client = OpenAI(api_key=api_key, base_url=resolved_url, default_headers=extra_headers)
-    response = client.chat.completions.create(
-        model=model,
-        max_tokens=4096,
-        messages=[
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": user_prompt},
-        ],
-    )
-    return response.choices[0].message.content.strip()
+    for attempt in range(3):
+        try:
+            response = client.chat.completions.create(
+                model=model,
+                max_tokens=4096,
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": user_prompt},
+                ],
+            )
+            return response.choices[0].message.content.strip()
+        except Exception as e:
+            if "rate_limit" in str(e).lower() or "429" in str(e):
+                wait = 30 * (attempt + 1)
+                print(f"  Rate limit hit, waiting {wait}s before retry {attempt+1}/3...")
+                time.sleep(wait)
+            else:
+                raise
+    raise RuntimeError("LLM call failed after 3 retries")
 
 
 # ─── Config ──────────────────────────────────────────────────────────────────
@@ -309,6 +345,8 @@ def process_brand_data(api_key, brand_cfg):
     all_citations = []  # (url, title, model_key)
     all_entities = []   # (name, entity_type, model_key)
     sentiment_mentions = []
+    total_runs_analyzed = 0          # count of individual AI model runs processed
+    brand_model_mention_counts = defaultdict(int)  # model_key -> runs where brand mentioned
 
     for p in prompts_raw:
         prompt_id = p.get("id") or p.get("promptId")
@@ -330,6 +368,9 @@ def process_brand_data(api_key, brand_cfg):
             model_key = entry.get("aiModel") or entry.get("model", "unknown")
             mentioned = entry.get("mentioned", False)
             score = entry.get("score", 0) or 0
+            total_runs_analyzed += 1
+            if mentioned:
+                brand_model_mention_counts[model_key] += 1
             rank = entry.get("rank")
             sentiment = entry.get("sentiment")
             if sentiment:
@@ -338,8 +379,8 @@ def process_brand_data(api_key, brand_cfg):
                     sentiment = "neutral"
 
             response_text = (
-                entry.get("response") or
                 entry.get("fullResponse") or
+                entry.get("responseSnippet") or
                 entry.get("responseText") or ""
             )
             snippet = response_text[:300] if response_text else ""
@@ -513,28 +554,69 @@ def process_brand_data(api_key, brand_cfg):
         durl_brand[domain] = urls_sorted
 
     # ── Competitors aggregation ──────────────────────────────────────────────
-    comp_data = defaultdict(lambda: {"mentions": 0, "scores": [], "models": set(), "sentiments": [], "model_counts": defaultdict(int)})
+    INGREDIENT_STOPWORDS = {
+        "proteina", "proteína", "creatina", "cafeina", "cafeína", "vitamina",
+        "omega", "colágeno", "colageno", "aminoácidos", "aminoacidos", "bcaa",
+        "glutamina", "zinc", "magnesio", "hierro", "calcio", "fibra", "azúcar",
+        "azucar", "sodio", "potasio", "fosforo", "fósforo", "carbohidrato",
+        "protein", "creatine", "caffeine", "collagen", "vitamin", "fiber",
+        "glucose", "fructose", "sucrose", "sodium", "calcium", "iron",
+    }
+
+    # Case-insensitive accumulation
+    comp_data_lower = defaultdict(lambda: {
+        "canonical": "", "mentions": 0, "models": set(), "model_counts": defaultdict(int)
+    })
     for name, etype, model_key in all_entities:
         if not name:
             continue
-        comp_data[name]["mentions"] += 1
-        comp_data[name]["models"].add(model_key)
-        comp_data[name]["model_counts"][model_key] += 1
+        key = name.lower()
+        info = comp_data_lower[key]
+        # Keep the longest/most-capitalised form as canonical
+        if len(name) > len(info["canonical"]):
+            info["canonical"] = name
+        info["mentions"] += 1
+        info["models"].add(model_key)
+        info["model_counts"][model_key] += 1
 
     competitors_out = []
-    for name, info in comp_data.items():
-        sents = info["sentiments"]
-        top_sent = max(set(sents), key=sents.count) if sents else "neutral"
+    for key, info in comp_data_lower.items():
+        # Filter: min 3 mentions, min 3 chars, not an ingredient, not a number
+        if info["mentions"] < 3:
+            continue
+        if len(key) < 3:
+            continue
+        if key in INGREDIENT_STOPWORDS:
+            continue
+        if key.replace(".", "").replace(",", "").isdigit():
+            continue
+        avg_score = round(info["mentions"] / max(total_runs_analyzed, 1) * 100, 1)
         competitors_out.append({
-            "name": name,
+            "name": info["canonical"],
             "mentions": info["mentions"],
             "modelMentions": dict(info["model_counts"]),
-            "avgScore": 0,
-            "topSentiment": top_sent,
+            "avgScore": avg_score,
+            "topSentiment": "neutral",
             "models": sorted(info["models"]),
             "summaries": [],
         })
     competitors_out.sort(key=lambda x: -x["mentions"])
+    competitors_out = competitors_out[:100]  # cap at 100
+
+    # Prepend the tracked brand itself as position-0 reference row
+    brand_total_mentions = sum(brand_model_mention_counts.values())
+    brand_avg_score = round(brand_total_mentions / max(total_runs_analyzed, 1) * 100, 1)
+    brand_entry = {
+        "name": brand_name,
+        "mentions": brand_total_mentions,
+        "modelMentions": dict(brand_model_mention_counts),
+        "avgScore": brand_avg_score,
+        "topSentiment": "positive",
+        "models": sorted(brand_model_mention_counts.keys()),
+        "summaries": [],
+        "isBrand": True,
+    }
+    competitors_out.insert(0, brand_entry)
 
     comp_domains = {c["name"]: comp_domain_from_name(c["name"]) for c in competitors_out}
 
@@ -680,7 +762,7 @@ def generate_actions(cfg, brand_name, brand_domain, data):
     provider = cfg.get("llm_provider", "anthropic")
     api_key = cfg["llm_api_key"]
     pconf = PROVIDER_CONFIGS.get(provider, {})
-    model = cfg.get("llm_model") or pconf.get("default_model", "gpt-4o")
+    model = cfg.get("llm_model") or pconf.get("default_model") if provider != "claude-cli" else cfg.get("llm_model")
     base_url = cfg.get("llm_base_url")
 
     print(f"  Generating actions for {brand_name} (via {provider} / {model})...")
