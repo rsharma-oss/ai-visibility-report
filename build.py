@@ -235,36 +235,49 @@ def classify_url(url, domain, title=""):
     url_lower = url.lower()
 
     # domain_type
-    if any(d in domain for d in ["reddit.com", "quora.com", "twitter.com", "linkedin.com"]):
+    if any(d in domain for d in ["instagram.com", "tiktok.com", "twitter.com", "x.com", "facebook.com", "reddit.com", "quora.com", "forocoches.com"]):
         domain_type = "social_media"
     elif any(d in domain for d in ["youtube.com", "vimeo.com"]):
         domain_type = "video"
-    elif any(seg in path for seg in ["/blog/", "/articles/", "/post/", "/posts/"]):
-        domain_type = "blog_article"
     elif any(seg in path for seg in ["/docs/", "/help/", "/support/"]):
         domain_type = "documentation"
     elif any(seg in path for seg in ["/pricing", "/plans"]):
         domain_type = "product_page"
-    elif path.count("/") <= 2:
+    elif any(seg in path for seg in ["/product/", "/products/", "/tienda/", "/shop/", "/comprar/", "/collections/"]):
+        domain_type = "product_page"
+    elif path.count("/") <= 1 or (path.count("/") == 2 and path.endswith("/")):
         domain_type = "homepage"
     else:
-        domain_type = "blog_article"
+        domain_type = "article_page"
 
-    # content_type
-    if any(kw in title or kw in url_lower for kw in ["vs ", " versus", "comparison", "alternative"]):
-        content_type = "comparison"
-    elif any(kw in title or kw in url_lower for kw in ["how to", "guide", "tutorial"]):
-        content_type = "how_to_guide"
-    elif any(kw in title or kw in url_lower for kw in ["best ", "top ", " tools", " apps"]):
+    # content_type — Spanish + English patterns
+    listicle_patterns = [
+        r'las?\s+\d+\s+mejores?', r'los?\s+\d+\s+mejores?', r'top\s+\d+',
+        r'\d+\s+best', r'best\s+\d+', r'\bbest\b.{0,30}\b(supplement|protein|brand|product)',
+        r'\btop\b.{0,30}\b(supplement|protein|brand|product)',
+        r'/top-', r'/best-', r'/mejores?-', r'ranking', r'comparativa',
+        r'mejores?\s+(suplementos?|proteinas?|marcas?|productos?)',
+    ]
+    comparison_patterns = [r'\bvs\b', r'\bversus\b', r'comparison', r'comparar', r'diferencia\s+entre', r'cual\s+es\s+mejor', r'alternative']
+    howto_patterns = [r'\bc[oó]mo\b', r'\bhow\s+to\b', r'\bgu[ií]a\b', r'\bguide\b', r'\btutorial\b', r'qu[eé]\s+es\b', r'cu[aá]ndo\b']
+
+    combined = title + " " + url_lower
+    if any(re.search(p, combined) for p in listicle_patterns):
         content_type = "listicle_roundup"
+    elif any(re.search(p, combined) for p in comparison_patterns):
+        content_type = "comparison"
+    elif any(re.search(p, combined) for p in howto_patterns):
+        content_type = "how_to_guide"
     elif domain_type == "social_media":
-        content_type = "forum_thread"
+        content_type = "social_media" if any(d in domain for d in ["instagram.com", "tiktok.com", "twitter.com", "x.com", "facebook.com"]) else "forum_thread"
     elif domain_type == "video":
         content_type = "video"
     elif domain_type == "product_page":
         content_type = "product_page"
+    elif domain_type == "homepage":
+        content_type = "brand_homepage"
     else:
-        content_type = "blog_article"
+        content_type = "article"
 
     return domain_type, content_type
 
@@ -363,6 +376,8 @@ def process_brand_data(api_key, brand_cfg):
         models_data = {}
         scores = []
         mentions_count = 0
+        prompt_comp_all = defaultdict(int)
+        prompt_comp_by_model = defaultdict(lambda: defaultdict(int))
 
         for entry in history:
             model_key = entry.get("aiModel") or entry.get("model", "unknown")
@@ -385,12 +400,30 @@ def process_brand_data(api_key, brand_cfg):
             )
             snippet = response_text[:300] if response_text else ""
 
+            # Collect competitors mentioned in this same response entry
+            entry_comps = []
+            for ent in (entry.get("brandMentions") or entry.get("entities") or []):
+                ent_type = (ent.get("type") or ent.get("entityType") or "").lower()
+                if ent_type in ("competitor", "untracked"):
+                    ent_name = ent.get("entityName") or ent.get("name", "")
+                    if ent_name and ent_name.lower() != brand_name.lower():
+                        entry_comps.append({
+                            "name": ent_name,
+                            "rank": ent.get("rank"),
+                            "score": ent.get("score"),
+                        })
+            for ec in entry_comps:
+                if ec.get("name"):
+                    prompt_comp_all[ec["name"]] += 1
+                    prompt_comp_by_model[model_key][ec["name"]] += 1
+
             models_data[model_key] = {
                 "mentioned": mentioned,
                 "score": score,
                 "rank": rank,
                 "sentiment": sentiment,
                 "snippet": snippet,
+                "competitors": entry_comps[:8],
             }
 
             if mentioned:
@@ -426,11 +459,12 @@ def process_brand_data(api_key, brand_cfg):
                 entry.get("sources") or
                 entry.get("citedSources") or []
             )
+            _entry_comp_names = [c["name"] for c in entry_comps if c.get("name")]
             for src in sources:
                 url = src.get("url", "")
                 title = src.get("title") or urlparse(url).path or url
                 if url:
-                    all_citations.append((url, title, model_key))
+                    all_citations.append((url, title, model_key, _entry_comp_names))
 
             for ent in (entry.get("brandMentions") or entry.get("entities") or []):
                 ent_type = (ent.get("type") or ent.get("entityType") or "").lower()
@@ -481,6 +515,10 @@ def process_brand_data(api_key, brand_cfg):
         avg_score = round(sum(scores) / len(scores), 2) if scores else 0.0
         best_score = max(scores) if scores else 0
 
+        _pc = {"all": sorted([{"name": k, "count": v} for k, v in prompt_comp_all.items()], key=lambda x: -x["count"])[:6]}
+        for _mk, _cnt in prompt_comp_by_model.items():
+            _pc[_mk] = sorted([{"name": k, "count": v} for k, v in _cnt.items()], key=lambda x: -x["count"])[:6]
+
         prompts_out.append({
             "id": prompt_id,
             "text": prompt_text,
@@ -489,11 +527,18 @@ def process_brand_data(api_key, brand_cfg):
             "mentions": mentions_count,
             "totalRuns": len(history),
             "models": models_data,
+            "_comps": _pc,
         })
+
+    # ── PROMPT_COMPS ─────────────────────────────────────────────────────────
+    prompt_comps_out = {}
+    for _p in prompts_out:
+        _pid = _p["id"]
+        prompt_comps_out[_pid] = _p.pop("_comps", {"all": []})
 
     # ── Citations aggregation ─────────────────────────────────────────────────
     url_data = {}
-    for url, title, model_key in all_citations:
+    for url, title, model_key, _ in all_citations:
         if url not in url_data:
             url_data[url] = {"title": title, "count": 0, "models": set(), "mc": defaultdict(int)}
         url_data[url]["count"] += 1
@@ -639,7 +684,7 @@ def process_brand_data(api_key, brand_cfg):
         "domain_types": defaultdict(int),
         "content_types": defaultdict(int),
     })
-    for url, title, model_key in all_citations:
+    for url, title, model_key, _ in all_citations:
         domain = extract_domain(url)
         dt, ct = classify_url(url, domain, title)
         model_cit[model_key]["total"] += 1
@@ -664,6 +709,52 @@ def process_brand_data(api_key, brand_cfg):
             ),
         }
 
+    # ── COMP_CITS: competitor-citation co-occurrence mapping ─────────────────
+    _comp_cit_raw = defaultdict(lambda: defaultdict(lambda: {"count": 0, "models": set(), "title": ""}))
+    for _url, _title, _model_key, _comp_names in all_citations:
+        for _cname in _comp_names:
+            if _cname:
+                _comp_cit_raw[_cname][_url]["count"] += 1
+                _comp_cit_raw[_cname][_url]["models"].add(_model_key)
+                if not _comp_cit_raw[_cname][_url]["title"]:
+                    _comp_cit_raw[_cname][_url]["title"] = _title
+
+    def _is_real_brand(name):
+        if re.search(r'\d', name):
+            return False
+        for kw in ["impact whey", "evolate", "premium body"]:
+            if kw in name.lower():
+                return False
+        return True
+
+    _comp_cits_map = {}
+    for _cname, _url_info in _comp_cit_raw.items():
+        if not _is_real_brand(_cname):
+            continue
+        if _cname.lower() in INGREDIENT_STOPWORDS:
+            continue
+        _url_list = sorted(
+            [
+                {
+                    "url": _url,
+                    "title": _info["title"].replace("—", " - ").replace("–", "-"),
+                    "domain": extract_domain(_url),
+                    "count": _info["count"],
+                    "models": sorted(_info["models"]),
+                    "pageType": classify_url(_url, extract_domain(_url), _info["title"])[0],
+                    "contentType": classify_url(_url, extract_domain(_url), _info["title"])[1],
+                }
+                for _url, _info in _url_info.items()
+            ],
+            key=lambda x: -x["count"],
+        )[:20]
+        if _url_list:
+            _comp_cits_map[_cname] = _url_list
+
+    comp_cits_out = dict(
+        sorted(_comp_cits_map.items(), key=lambda x: -sum(u["count"] for u in x[1]))[:20]
+    )
+
     return {
         "prompts": prompts_out,
         "citations": citations_out,
@@ -673,6 +764,8 @@ def process_brand_data(api_key, brand_cfg):
         "durl": durl_brand,
         "dcat": dcat,
         "comp_domains": comp_domains,
+        "prompt_comps": prompt_comps_out,
+        "comp_cits": comp_cits_out,
     }
 
 
@@ -804,7 +897,7 @@ def js_obj_literal(py_obj):
 
 
 def inject_template(template_path, output_path, brands, D, DURL, DCAT, comp_domains,
-                    BRAND_CFG, ACTIONS):
+                    BRAND_CFG, ACTIONS, PROMPT_COMPS, COMP_CITS):
     with open(template_path, encoding="utf-8") as f:
         html = f.read()
 
@@ -817,6 +910,8 @@ def inject_template(template_path, output_path, brands, D, DURL, DCAT, comp_doma
         "%%BRAND_CFG%%": js_obj_literal(BRAND_CFG),
         "%%ACTIONS%%": js_obj_literal(ACTIONS),
         "%%DEFAULT_BRAND%%": brands[0]["key"],
+        "%%PROMPT_COMPS%%": js_obj_literal(PROMPT_COMPS),
+        "%%COMP_CITS%%": js_obj_literal(COMP_CITS),
     }
 
     for placeholder, value in replacements.items():
@@ -859,6 +954,8 @@ def main():
     comp_domains_all = {}
     BRAND_CFG = {}
     ACTIONS = {}
+    PROMPT_COMPS = {}
+    COMP_CITS = {}
 
     for b in brands_cfg:
         brand_name = b["name"]
@@ -886,6 +983,8 @@ def main():
         }
 
         ACTIONS[brand_key] = generate_actions(cfg, brand_name, brand_domain, brand_data)
+        PROMPT_COMPS.update(brand_data["prompt_comps"])
+        COMP_CITS[brand_name] = brand_data["comp_cits"]
 
     print(f"\nWriting report to {output_file}...")
     inject_template(
@@ -898,6 +997,8 @@ def main():
         comp_domains_all,
         BRAND_CFG,
         ACTIONS,
+        PROMPT_COMPS,
+        COMP_CITS,
     )
     print(f"Done! Open {output_file} in your browser.")
 

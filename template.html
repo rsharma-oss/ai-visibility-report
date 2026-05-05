@@ -33,7 +33,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-seri
 .mb-btn{display:flex;align-items:center;gap:5px;padding:4px 10px;border-radius:20px;border:1px solid var(--border);background:var(--surface);color:var(--ink3);font-size:12px;font-weight:500;cursor:pointer;white-space:nowrap;transition:all .15s}
 .mb-btn img{width:14px;height:14px;border-radius:3px;flex-shrink:0}
 .mb-btn.active{background:var(--ink);border-color:var(--ink);color:#fff}
-.mb-btn.active img{filter:brightness(10)}
+.mb-btn.active img{filter:brightness(0) invert(1)}
 .subnav{position:sticky;top:102px;z-index:180;background:var(--paper);border-bottom:1px solid var(--border);padding:0 28px}
 .sn-inner{display:flex;overflow-x:auto;scrollbar-width:none}
 .sn-inner::-webkit-scrollbar{display:none}
@@ -224,6 +224,30 @@ tr.dom-row-open .dom-chev{transform:rotate(180deg)}
   .wrap,.header,.model-bar,.subnav{padding-left:14px;padding-right:14px}
 }
 @media(max-width:480px){.stat-row,.sent-tiles,.act-grid{grid-template-columns:1fr}}
+.comp-icons{display:flex;gap:3px;align-items:center}
+.comp-iw{position:relative;display:inline-flex;cursor:default}
+.comp-iw img{width:22px;height:22px;border-radius:4px;border:1.5px solid var(--border);background:var(--bg2)}
+.comp-itip{position:absolute;bottom:calc(100% + 6px);left:50%;transform:translateX(-50%);background:#1e293b;color:#fff;font-size:11px;line-height:1.45;padding:5px 8px;border-radius:6px;white-space:nowrap;pointer-events:none;opacity:0;transition:opacity .15s;z-index:30}
+.comp-iw:hover .comp-itip{opacity:1}
+.comp-itip::after{content:'';position:absolute;top:100%;left:50%;transform:translateX(-50%);border:4px solid transparent;border-top-color:#1e293b}
+.cit-comp-bar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:14px 18px 0;margin-bottom:4px}
+.cit-comp-label{font-size:11px;font-weight:600;color:var(--ink4);letter-spacing:.06em;text-transform:uppercase;white-space:nowrap}
+.cit-comp-dd{position:relative;display:inline-block}
+.cit-comp-trigger{display:flex;align-items:center;gap:6px;padding:6px 12px;border-radius:8px;border:1.5px solid var(--border);background:var(--bg2);color:var(--ink2);font-size:13px;font-weight:500;cursor:pointer;transition:all .15s;min-width:180px}
+.cit-comp-trigger:hover,.cit-comp-trigger:focus{border-color:var(--v);outline:none}
+.cit-comp-trigger img{width:14px;height:14px;border-radius:3px;flex-shrink:0}
+.cit-dd-chev{margin-left:auto;color:var(--ink4);flex-shrink:0}
+.cit-comp-menu{position:absolute;top:calc(100% + 4px);left:0;min-width:220px;background:var(--paper);border:1.5px solid var(--border);border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.12);z-index:200;overflow:hidden;display:none}
+.cit-comp-menu.open{display:block}
+.cit-comp-opt{display:flex;align-items:center;gap:8px;padding:8px 12px;font-size:13px;color:var(--ink2);cursor:pointer;transition:background .1s}
+.cit-comp-opt:hover{background:var(--surface2)}
+.cit-comp-opt.active{background:var(--surface2);font-weight:600;color:var(--v)}
+.cit-comp-opt img{width:14px;height:14px;border-radius:3px;flex-shrink:0}
+.comp-list-hdr{display:flex;align-items:center;gap:10px;padding:0 0 6px;border-bottom:1.5px solid var(--border);margin-bottom:4px}
+.clh-main{flex:1}
+.clh-cell{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--ink4);text-align:right;flex-shrink:0}
+.clh-mentions{width:74px}
+.clh-score{width:60px;display:flex;align-items:center;justify-content:flex-end;gap:3px}
 </style>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-YV8FCLN403"></script>
@@ -251,7 +275,7 @@ tr.dom-row-open .dom-chev{transform:rotate(180deg)}
     <img src="https://www.google.com/s2/favicons?domain=gemini.google.com&sz=32">Gemini
   </button>
   <button class="mb-btn" onclick="setModel('sonar',this)">
-    <img src="https://www.google.com/s2/favicons?domain=perplexity.ai&sz=32">Sonar
+    <img src="https://www.google.com/s2/favicons?domain=perplexity.ai&sz=32">Perplexity
   </button>
   <button class="mb-btn" onclick="setModel('gpt-4o-mini',this)">
     <img src="https://www.google.com/s2/favicons?domain=openai.com&sz=32">ChatGPT
@@ -290,6 +314,7 @@ tr.dom-row-open .dom-chev{transform:rotate(180deg)}
         <th class="pt-sort" onclick="setSortCol('position')" id="th-position">Avg Position<span class="sort-arr" id="sa-position">&#8597;</span></th>
         <th class="pt-sort" onclick="setSortCol('sentiment')" id="th-sentiment">Sentiment<span class="sort-arr" id="sa-sentiment">&#8597;</span></th>
         <th>Models</th>
+        <th class="pt-sort" onclick="setSortCol('competitors')" id="th-competitors">Top Competitors<span class="sort-arr" id="sa-competitors">&#8597;</span></th>
       </tr></thead><tbody id="promptsTbody"></tbody></table>
     </div>
   </div>
@@ -329,6 +354,8 @@ const DURL=%%DOMAIN_URLS%%;
 const DCAT=%%DOMAIN_CATEGORIES%%;
 const MODEL_META={'google-aio':{label:'Google AIO',domain:'google.com'},'google-ai-mode':{label:'Google AI Mode',domain:'google.com'},'gemini-2.5-flash':{label:'Gemini',domain:'gemini.google.com'},'sonar':{label:'Perplexity',domain:'perplexity.ai'},'gpt-4o-mini':{label:'ChatGPT',domain:'openai.com'}};
 const MODEL_ORDER=['google-aio','google-ai-mode','gemini-2.5-flash','sonar','gpt-4o-mini'];
+const PROMPT_COMPS=%%PROMPT_COMPS%%;
+const COMP_CITS=%%COMP_CITS%%;
 const COMP_DOMAINS=%%COMP_DOMAINS%%;
 const BRAND_CFG=%%BRAND_CFG%%;
 const ICONS={
@@ -344,6 +371,7 @@ const ICONS={
 };
 const ACTIONS=%%ACTIONS%%;
 let currentBrand='%%DEFAULT_BRAND%%',activeModel='all',promptFilter='all',actFilter='all',searchQuery='';
+var activeCitComp='all';
 let sortCol='visibility',sortDir='desc';
 function setBrand(b,btn){currentBrand=b;sortCol='visibility';sortDir='desc';['prompt','visibility','position','sentiment'].forEach(function(c){var arr=document.getElementById('sa-'+c);var th=document.getElementById('th-'+c);if(!arr||!th)return;if(c==='visibility'){th.classList.add('sorted');arr.classList.add('sorted');arr.innerHTML='&#8595;';}else{th.classList.remove('sorted');arr.classList.remove('sorted');arr.innerHTML='&#8597;';}});document.querySelectorAll('.bt-btn').forEach(x=>x.classList.remove('active'));btn.classList.add('active');renderAll();}
 function setModel(m,btn){activeModel=m;document.querySelectorAll('.mb-btn').forEach(x=>x.classList.remove('active'));btn.classList.add('active');renderAll();}
@@ -494,7 +522,7 @@ function renderStats(){
 function setSortCol(col){
   if(sortCol===col){sortDir=sortDir==='asc'?'desc':'asc';}
   else{sortCol=col;sortDir=col==='position'?'asc':'desc';}
-  ['prompt','visibility','position','sentiment'].forEach(function(c){
+  ['prompt','visibility','position','sentiment','competitors'].forEach(function(c){
     var arr=document.getElementById('sa-'+c);
     var th=document.getElementById('th-'+c);
     if(!arr||!th)return;
@@ -537,6 +565,14 @@ function sortPrompts(arr){
       else{var am2=a.models[activeModel],bm2=b.models[activeModel];av=sentWeight(am2&&am2.sentiment);bv=sentWeight(bm2&&bm2.sentiment);}
       return dir*(av-bv);
     }
+    if(sortCol==='competitors'){
+      var aTopC=0,bTopC=0;
+      if(typeof PROMPT_COMPS!=='undefined'){var aPC=PROMPT_COMPS[a.id];
+      if(aPC){var aPCK=activeModel==='all'?'all':activeModel;var aPComps=aPC[aPCK]||aPC['all']||[];aTopC=aPComps.length?(aPComps[0].count||0):0;}
+      var bPC=PROMPT_COMPS[b.id];
+      if(bPC){var bPCK=activeModel==='all'?'all':activeModel;var bPComps=bPC[bPCK]||bPC['all']||[];bTopC=bPComps.length?(bPComps[0].count||0):0;}}
+      return dir*(aTopC-bTopC);
+    }
     return 0;
   });
 }
@@ -550,13 +586,14 @@ function renderPrompts(){
 function onPromptSearch(q){searchQuery=q;applyPromptFilter();}
 function setPromptFilter(f,btn){promptFilter=f;document.querySelectorAll('.filter-bar .fb-btn').forEach(x=>x.classList.remove('active'));btn.classList.add('active');applyPromptFilter();}
 function applyPromptFilter(){
+  var bk=BRAND_CFG[currentBrand].key;
   var data=_pd.slice();
   if(searchQuery)data=data.filter(function(p){return p.text.toLowerCase().indexOf(searchQuery.toLowerCase())>-1;});
   if(promptFilter==='mentioned')data=data.filter(function(p){return activeModel==='all'?p.mentions>0:(p.models[activeModel]&&p.models[activeModel].mentioned);});
   if(promptFilter==='not')data=data.filter(function(p){return activeModel==='all'?p.mentions===0:!(p.models[activeModel]&&p.models[activeModel].mentioned);});
   data=sortPrompts(data);
   var tbody=document.getElementById('promptsTbody');
-  if(!data.length){tbody.innerHTML='<tr><td colspan="5" style="text-align:center;padding:32px;color:var(--ink4)">No prompts match filter</td></tr>';return;}
+  if(!data.length){tbody.innerHTML='<tr><td colspan="6" style="text-align:center;padding:32px;color:var(--ink4)">No prompts match filter</td></tr>';return;}
   tbody.innerHTML=data.map(function(p){
     /* visibility */
     var visBadge,mentionedModels;
@@ -612,7 +649,34 @@ function applyPromptFilter(){
       var extraStyle=isActive?'outline:2px solid var(--v);outline-offset:1px;border-radius:4px;':'';
       return '<div class="mdot-wrap" data-tip="'+tip+'"><img class="mdot-img'+(hit?'':' mdot-miss')+'" src="'+fav(m.domain)+'" style="'+extraStyle+'" onerror="this.src=\'data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==\'"></div>';
     }).join('');
-    return '<tr><td><div class="pt-text">'+p.text+'</div></td><td>'+visBadge+'</td><td>'+posBadge+'</td><td>'+sentBadge+'</td><td><div class="model-dots">'+dots+'</div></td></tr>';
+    /* top competitors — per-prompt if available, else top for selected model */
+    var pComps=[];
+    if(activeModel!=='all'){
+      var mr4=p.models[activeModel];
+      if(mr4&&mr4.competitors&&mr4.competitors.length){pComps=mr4.competitors.slice(0,3);}
+    } else {
+      MODEL_ORDER.forEach(function(mk){
+        var mv=p.models[mk];
+        if(mv&&mv.competitors){mv.competitors.forEach(function(pc){var found=pComps.find(function(x){return x.name===pc.name;});if(found){found._cnt=(found._cnt||1)+1;}else{pComps.push(Object.assign({},pc,{_cnt:1}));}});}
+      });
+      pComps.sort(function(a,b){return(b._cnt||1)-(a._cnt||1);});
+      pComps=pComps.slice(0,3);
+    }
+    if(!pComps.length){
+      var aggC=(D.competitors[bk]||[]).filter(function(c){return!c.isBrand;});
+      if(activeModel!=='all'){aggC=aggC.filter(function(c){return c.modelMentions&&(c.modelMentions[activeModel]||0)>0;}).sort(function(a,b){return(b.modelMentions[activeModel]||0)-(a.modelMentions[activeModel]||0);});}
+      pComps=aggC.slice(0,3).map(function(c){var cnt=activeModel==='all'?c.mentions:(c.modelMentions&&c.modelMentions[activeModel]||0);return{name:c.name,_aggCount:cnt};});
+    }
+    var compIcons=pComps.map(function(pc){
+      var cd=COMP_DOMAINS[pc.name]||(pc.name.toLowerCase().replace(/\s+/g,'')+'.com');
+      var tipLines=[pc.name];
+      if(pc.rank)tipLines.push('Rank #'+pc.rank);
+      if(pc.score)tipLines.push('Score '+pc.score);
+      if(pc._aggCount!=null)tipLines.push(pc._aggCount+' mention'+(pc._aggCount!==1?'s':'')+(activeModel!=='all'?' in '+(MODEL_META[activeModel]||{label:activeModel}).label:''));
+      return '<div class="comp-iw"><img src="'+fav(cd)+'" onerror="this.style.display=\'none\'"><div class="comp-itip">'+tipLines.join(' · ')+'</div></div>';
+    }).join('');
+    if(!compIcons)compIcons='<span style="color:var(--ink4);font-size:11px">-</span>';
+    return '<tr><td><div class="pt-text">'+p.text+'</div></td><td>'+visBadge+'</td><td>'+posBadge+'</td><td>'+sentBadge+'</td><td><div class="model-dots">'+dots+'</div></td><td><div class="comp-icons">'+compIcons+'</div></td></tr>';
   }).join('');
 }
 /* sentiment */
@@ -624,7 +688,7 @@ function renderSentiment(){
   var tiles=[{cls:'spos',num:tileCounts.positive,lbl:'Positive'},{cls:'sneu',num:tileCounts.neutral,lbl:'Neutral'},{cls:'sneg',num:tileCounts.negative,lbl:'Negative'},{cls:'sunc',num:tileCounts.uncertain,lbl:'Uncertain'}].map(function(t){return '<div class="sent-tile '+t.cls+'"><div class="st-num">'+t.num+'</div><div class="st-lbl">'+t.lbl+'</div></div>';}).join('');
   var el=document.getElementById('sentContent');
   if(s.total_mentions===0){el.innerHTML='<div class="sent-tiles">'+tiles+'</div><div class="cc"><div class="cc-body"><div class="no-data"><div class="no-data-icon">&#128202;</div><h3>No mentions detected</h3><p>'+BRAND_CFG[currentBrand].name+' was not mentioned in any of the 30 tracked prompts across 5 AI models. See the Actions tab for steps to achieve first mentions.</p></div></div></div>';return;}
-  if(!mentions.length){el.innerHTML='<div class="sent-tiles">'+tiles+'</div><div class="cc"><div class="cc-body"><div class="no-data"><div class="no-data-icon">&#128269;</div><h3>No mentions for '+(MODEL_META[activeModel]||{label:activeModel}).label+'</h3><p>Switch to "All models" or try Sonar.</p></div></div></div>';return;}
+  if(!mentions.length){el.innerHTML='<div class="sent-tiles">'+tiles+'</div><div class="cc"><div class="cc-body"><div class="no-data"><div class="no-data-icon">&#128269;</div><h3>No mentions for '+(MODEL_META[activeModel]||{label:activeModel}).label+'</h3><p>Switch to "All models" or try Perplexity.</p></div></div></div>';return;}
   var cards=mentions.map(function(mn){
     var mm=MODEL_META[mn.model]||{label:mn.model,domain:'google.com'};
     var comps=(mn.competitors||[]).map(function(c){var cd=COMP_DOMAINS[c]||(c.toLowerCase().replace(/\s/g,'')+'.com');return '<span class="comp-tag" title="'+c+' was also recommended in this AI response"><img src="'+fav(cd,16)+'" style="width:12px;height:12px;border-radius:2px" onerror="this.style.display=\'none\'">'+c+'</span>';}).join('');
@@ -639,19 +703,52 @@ function renderCompetitors(){
   if(activeModel!=='all')comps=comps.filter(function(c){return c.models&&c.models.indexOf(activeModel)>-1;});
   var top15=comps.slice(0,15);
   var max=Math.max.apply(null,top15.map(function(c){return activeModel!=='all'&&c.modelMentions&&c.modelMentions[activeModel]!=null?c.modelMentions[activeModel]:c.mentions;}))||1;
-  document.getElementById('compList').innerHTML=top15.map(function(c,i){
+  var _iSvg='<svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.4"><circle cx="7" cy="7" r="6"/><path d="M7 6v4" stroke-linecap="round"/><circle cx="7" cy="4.5" r=".5" fill="currentColor" stroke="none"/></svg>';
+  var _compRows=top15.map(function(c,i){
+    var isBrand=c.isBrand===true;
     var cd=COMP_DOMAINS[c.name]||(c.name.toLowerCase().replace(/\s/g,'')+'.com');
     var dispCount=activeModel!=='all'&&c.modelMentions&&c.modelMentions[activeModel]!=null?c.modelMentions[activeModel]:c.mentions;
     var pct=(dispCount/max*100).toFixed(0);
     var sdotCls=c.topSentiment==='positive'?'sdot-pos':c.topSentiment==='negative'?'sdot-neg':'sdot-neu';
-    return '<div class="comp-row"><div class="comp-rank">'+(i+1)+'</div><img class="comp-fav" src="'+fav(cd)+'" onerror="this.style.display=\'none\'"><div class="comp-name">'+c.name+'</div><div class="comp-bar-wrap"><div class="comp-bar" style="width:'+pct+'%"></div></div><div class="comp-count">'+dispCount+' mentions</div><div class="comp-score">avg '+c.avgScore+'</div><div class="sdot '+sdotCls+'" title="'+c.topSentiment+'"></div></div>';
-  }).join('')||'<p style="color:var(--ink4);font-size:13px">No competitors for this filter.</p>';
+    var rankCell=isBrand?'<div class="comp-rank" style="font-size:10px;font-weight:700;letter-spacing:.05em;color:var(--v)">YOU</div>':'<div class="comp-rank">'+i+'</div>';
+    var rowStyle=isBrand?' style="background:var(--surface2);border-radius:6px;margin-bottom:6px;border:1px solid var(--border)"':'';
+    return '<div class="comp-row"'+rowStyle+'>'+rankCell+'<img class="comp-fav" src="'+fav(cd)+'" onerror="this.style.display=\'none\'"><div class="comp-name">'+c.name+'</div><div class="comp-bar-wrap"><div class="comp-bar" style="width:'+pct+'%"></div></div><div class="comp-count">'+dispCount+' mentions</div><div class="comp-score">'+c.avgScore+'</div><div class="sdot '+sdotCls+'" title="'+c.topSentiment+'"></div></div>';
+  }).join('');
+  var _compHdr='<div class="comp-list-hdr"><div class="clh-main"></div><div class="clh-cell clh-mentions">Mentions</div><div class="clh-cell clh-score"><span class="info-tip" data-tip="Average AI visibility score (0-100) when mentioned. Score = ((total entities in response - rank + 1) / total entities) x 100. Higher score = more prominent placement.">'+_iSvg+'</span>Avg Score</div><div style="width:16px"></div></div>';
+  document.getElementById('compList').innerHTML=_compHdr+(_compRows||'<p style="color:var(--ink4);font-size:13px">No competitors for this filter.</p>');
   document.getElementById('compSub').textContent=comps.length+' competitors detected'+(activeModel!=='all'?' for '+(MODEL_META[activeModel]||{label:activeModel}).label:'');
   var top3=comps.slice(0,3);
   function _cDisp(c){return activeModel!=='all'&&c.modelMentions&&c.modelMentions[activeModel]!=null?c.modelMentions[activeModel]:c.mentions;}
   document.getElementById('compInsight').innerHTML=top3.length?
     '<div style="margin-bottom:14px"><div class="act-sect-label">Dominant competitors</div><p style="font-size:13px;color:var(--ink2);line-height:1.7;margin-top:6px"><b>'+top3[0].name+'</b> leads with '+_cDisp(top3[0])+' AI mentions at an average score of '+top3[0].avgScore+'.'+(top3[1]?' '+top3[1].name+' ('+_cDisp(top3[1])+' mentions) and '+(top3[2]?top3[2].name+' ('+_cDisp(top3[2])+')':'')+'follow.':'')+'</p></div><div><div class="act-sect-label">By sentiment</div><div style="margin-top:8px;display:flex;flex-direction:column;gap:7px">'+comps.slice(0,7).map(function(c){var cd=COMP_DOMAINS[c.name]||(c.name.toLowerCase().replace(/\s/g,'')+'.com');var col=c.topSentiment==='positive'?'#16a34a':c.topSentiment==='negative'?'#dc2626':'#64748b';return '<div style="display:flex;align-items:center;gap:8px;font-size:12px"><img src="'+fav(cd)+'" style="width:14px;height:14px;border-radius:3px;border:1px solid var(--border)" onerror="this.style.display=\'none\'"><span style="flex:1;color:var(--ink)">'+c.name+'</span><span style="color:'+col+';font-weight:600;font-size:11px">'+c.topSentiment+'</span><span style="color:var(--ink4)">avg '+c.avgScore+'</span></div>';}).join('')+'</div></div>':
     '<p style="color:var(--ink4);font-size:13px">No data for this filter.</p>';
+}
+function toggleCitDd(){var m=document.getElementById('citCompMenu');if(m)m.classList.toggle('open');}
+document.addEventListener('click',function(e){var dd=document.getElementById('citCompDd');if(dd&&!dd.contains(e.target)){var m=document.getElementById('citCompMenu');if(m)m.classList.remove('open');}});
+function setCitComp(name,btn){
+  activeCitComp=name;
+  var menu=document.getElementById('citCompMenu');
+  if(menu)menu.classList.remove('open');
+  renderCitations();
+}
+function buildUrlListFromArray(urls) {
+  if (!urls || !urls.length) return '<table class="dom-url-table"><tbody><tr><td colspan="5" style="color:var(--ink4);padding:14px;text-align:center">No URLs for this filter.</td></tr></tbody></table>';
+  var rows = urls.map(function(u) {
+    var mchips = (u.models || []).map(function(m) {
+      var mm = MODEL_META[m] || { domain: 'google.com', label: m };
+      return '<span class="mdot-wrap" data-tip="' + mm.label + '"><img class="dom-url-td-mimg" src="' + fav(mm.domain) + '" onerror="this.style.display=\'none\'"></span>';
+    }).join('');
+    var pt = u.pageType ? u.pageType.replace(/_/g, ' ').replace(/\b\w/g, function(x) { return x.toUpperCase(); }) : '<span style="color:var(--ink4)">-</span>';
+    var ct = u.contentType ? u.contentType.replace(/_/g, ' ').replace(/\b\w/g, function(x) { return x.toUpperCase(); }) : '<span style="color:var(--ink4)">-</span>';
+    return '<tr>' +
+      '<td class="dom-url-td-title"><a href="' + u.url + '" target="_blank" rel="noopener" title="' + u.url + '">' + (u.title || u.url).slice(0, 68) + '</a></td>' +
+      '<td class="dom-url-td-cnt tc">' + u.count + '×</td>' +
+      '<td class="tc"><span class="type-badge">' + pt + '</span></td>' +
+      '<td class="tc"><span class="type-badge">' + ct + '</span></td>' +
+      '<td class="tc"><div class="dom-url-td-models">' + mchips + '</div></td>' +
+      '</tr>';
+  }).join('');
+  return '<table class="dom-url-table"><thead><tr><th>URL / Title</th><th class="tc">Cited</th><th class="tc">Page Type</th><th class="tc">Content Type</th><th class="tc">AI Models</th></tr></thead><tbody>' + rows + '</tbody></table>';
 }
 /* citations */
 function buildUrlList(domain,bk){
@@ -696,13 +793,69 @@ function toggleDomRow(id,domain,bk){
     if(tr)tr.classList.add('dom-row-open');
   }
 }
+function toggleDomRowComp(id, domain, bk, useCompFilter) {
+  var panel = document.getElementById(id);
+  var tr = document.getElementById('tr-' + id);
+  if (panel.classList.contains('open')) {
+    panel.classList.remove('open');
+    if (tr) tr.classList.remove('dom-row-open');
+  } else {
+    if (useCompFilter && typeof COMP_CITS !== 'undefined' && COMP_CITS[bk] && COMP_CITS[bk][activeCitComp] && COMP_CITS[bk][activeCitComp].filter) {
+      var urls = COMP_CITS[bk][activeCitComp].filter(function(u) { return u.domain === domain; });
+      if (activeModel !== 'all') urls = urls.filter(function(u) { return u.models.indexOf(activeModel) > -1; });
+      panel.innerHTML = buildUrlListFromArray(urls);
+    } else {
+      panel.innerHTML = buildUrlList(domain, bk);
+    }
+    panel.classList.add('open');
+    if (tr) tr.classList.add('dom-row-open');
+  }
+}
 function renderCitations(){
-  var bk=BRAND_CFG[currentBrand].key,c;
-  if(activeModel!=='all'&&D.modelCitations&&D.modelCitations[bk]&&D.modelCitations[bk][activeModel]){
-    c=Object.assign({},D.modelCitations[bk][activeModel]);
-    c.uniqueDomains=c.topDomains?c.topDomains.length:D.citations[bk].uniqueDomains;
-    c.topListicles=D.citations[bk].topListicles;
-  } else c=D.citations[bk];
+  var bk=BRAND_CFG[currentBrand].key;
+  var fav_=function(d,s){return'https://www.google.com/s2/favicons?domain='+d+'&sz='+(s||32);};
+  var allComps=(D.competitors[bk]||[]).filter(function(c){return!c.isBrand&&COMP_DOMAINS[c.name]&&c.mentions>=2;}).slice(0,12);
+  var chevDdSvg='<svg class="cit-dd-chev" viewBox="0 0 10 6" fill="none" stroke="currentColor" stroke-width="1.5" width="10" height="6"><path d="M1 1l4 4 4-4"/></svg>';
+  var activeCd=activeCitComp==='all'?null:(COMP_DOMAINS[activeCitComp]||(activeCitComp.toLowerCase().replace(/\s+/g,'')+'.com'));
+  var triggerContent=(activeCd?'<img src="'+fav_(activeCd)+'" onerror="this.style.display=\'none\'">':'')+'<span>'+(activeCitComp==='all'?'All Citations':activeCitComp)+'</span>'+chevDdSvg;
+  var ddOpts='<div class="cit-comp-opt'+(activeCitComp==='all'?' active':'')+'" onclick="setCitComp(\'all\',this)">All Citations</div>';
+  ddOpts+=allComps.map(function(comp){
+    var cd=COMP_DOMAINS[comp.name]||(comp.name.toLowerCase().replace(/\s+/g,'')+'.com');
+    var isActive=activeCitComp===comp.name;
+    return '<div class="cit-comp-opt'+(isActive?' active':'')+'" onclick="setCitComp(\''+comp.name.replace(/'/g,"\\'").replace(/"/g,'&quot;')+'\',this)"><img src="'+fav_(cd)+'" onerror="this.style.display=\'none\'">'+comp.name+'</div>';
+  }).join('');
+  var filterBar='<div class="cit-comp-bar"><span class="cit-comp-label">Filter by competitor</span><div class="cit-comp-dd" id="citCompDd"><button class="cit-comp-trigger" onclick="toggleCitDd()">'+triggerContent+'</button><div class="cit-comp-menu" id="citCompMenu">'+ddOpts+'</div></div></div>';
+  var c;
+  var useCompFilter=activeCitComp!=='all'&&typeof COMP_CITS!=='undefined'&&COMP_CITS[bk]&&COMP_CITS[bk][activeCitComp];
+  if(useCompFilter){
+    var compUrls=COMP_CITS[bk][activeCitComp];
+    if(activeModel!=='all'){
+      compUrls=compUrls.filter(function(u){return u.models.indexOf(activeModel)>-1;});
+    }
+    var dtCounts={};var ctCounts={};var domainCounts={};var domainUrlMap={};
+    compUrls.forEach(function(u){
+      dtCounts[u.pageType]=(dtCounts[u.pageType]||0)+u.count;
+      ctCounts[u.contentType]=(ctCounts[u.contentType]||0)+u.count;
+      domainCounts[u.domain]=(domainCounts[u.domain]||0)+u.count;
+      if(!domainUrlMap[u.domain])domainUrlMap[u.domain]=[];
+      domainUrlMap[u.domain].push(u);
+    });
+    var total=compUrls.reduce(function(s,u){return s+u.count;},0);
+    var domainTypes=Object.keys(dtCounts).map(function(t){return{type:t,count:dtCounts[t]};}).sort(function(a,b){return b.count-a.count;});
+    var contentTypes=Object.keys(ctCounts).map(function(t){return{type:t,count:ctCounts[t]};}).sort(function(a,b){return b.count-a.count;});
+    var topDomains=Object.keys(domainCounts).map(function(d){return{domain:d,count:domainCounts[d]};}).sort(function(a,b){return b.count-a.count;}).slice(0,20);
+    var topListicles=[];
+    compUrls.forEach(function(u){if(u.contentType==='listicle_roundup')topListicles.push({domain:u.domain,title:u.title,url:u.url,count:u.count});});
+    topListicles.sort(function(a,b){return b.count-a.count;});topListicles=topListicles.slice(0,8);
+    c={total:total,uniqueDomains:Object.keys(domainCounts).length,domainTypes:domainTypes,contentTypes:contentTypes,topDomains:topDomains,topListicles:topListicles,_domainUrlMap:domainUrlMap};
+  } else {
+    if(activeModel!=='all'&&D.modelCitations&&D.modelCitations[bk]&&D.modelCitations[bk][activeModel]){
+      c=Object.assign({},D.modelCitations[bk][activeModel]);
+      c.uniqueDomains=c.topDomains?c.topDomains.length:D.citations[bk].uniqueDomains;
+      c.topListicles=D.citations[bk].topListicles;
+    } else c=D.citations[bk];
+    c._domainUrlMap=null;
+  }
   var tdt=c.domainTypes.reduce(function(a,x){return a+x.count;},0);
   var tct=c.contentTypes.reduce(function(a,x){return a+x.count;},0);
   var dtBars=c.domainTypes.map(function(dt){
@@ -719,9 +872,14 @@ function renderCitations(){
   var domRows=c.topDomains.slice(0,20).map(function(d,i){
     var t=DCAT&&DCAT[d.domain]?DCAT[d.domain]:'AI/SaaS Blog';
     var panelId='dup-'+currentBrand+'-'+i;
-    var hasUrls=DURL[bk]&&DURL[bk][d.domain]&&DURL[bk][d.domain].length>0;
+    var hasUrls;
+    if(useCompFilter&&c._domainUrlMap&&c._domainUrlMap[d.domain]){
+      hasUrls=true;
+    } else {
+      hasUrls=DURL[bk]&&DURL[bk][d.domain]&&DURL[bk][d.domain].length>0;
+    }
     var domCell=hasUrls
-      ?'<td onclick="toggleDomRow(\''+panelId+'\',\''+d.domain+'\',\''+bk+'\')" class="dom-row-clickable" style="display:flex;align-items:center">'+chevSvg+'<img class="dom-fav" src="'+fav(d.domain)+'" onerror="this.style.display=\'none\'" style="margin-right:5px"><b>'+d.domain+'</b></td>'
+      ?'<td onclick="toggleDomRowComp(\''+panelId+'\',\''+d.domain+'\',\''+bk+'\','+useCompFilter+')" class="dom-row-clickable" style="display:flex;align-items:center">'+chevSvg+'<img class="dom-fav" src="'+fav(d.domain)+'" onerror="this.style.display=\'none\'" style="margin-right:5px"><b>'+d.domain+'</b></td>'
       :'<td style="display:flex;align-items:center"><img class="dom-fav" src="'+fav(d.domain)+'" onerror="this.style.display=\'none\'" style="margin-right:5px"><b>'+d.domain+'</b></td>';
     return '<tr id="tr-'+panelId+'"><td style="color:var(--ink4);font-size:12px;width:24px">'+(i+1)+'</td>'+
       domCell+
@@ -732,15 +890,19 @@ function renderCitations(){
   var ltRows=(c.topListicles||[]).slice(0,8).map(function(l){
     return '<tr><td><img class="dom-fav" src="'+fav(l.domain)+'" onerror="this.style.display=\'none\'"><b>'+l.domain+'</b></td><td style="font-size:12px;color:var(--ink3)">'+l.title.slice(0,62)+'</td><td style="text-align:right;font-weight:600;color:var(--v)">'+l.count+'x</td></tr>';
   }).join('');
+  var subLabel=useCompFilter
+    ?'Citations co-occurring with '+activeCitComp+' mentions'+(activeModel!=='all'?' · '+(MODEL_META[activeModel]||{label:activeModel}).label:'')
+    :(c.uniqueDomains||'')+' unique domains'+(activeModel!=='all'?' for '+(MODEL_META[activeModel]||{label:activeModel}).label:'');
   document.getElementById('citContent').innerHTML=
+    filterBar+
     '<div class="two-col">'+
-      '<div class="cc"><div class="cc-head"><div class="cc-title">Page Type</div><div class="cc-sub">'+tdt.toLocaleString()+' total citations</div></div><div class="cc-body">'+dtBars+'</div></div>'+
-      '<div class="cc"><div class="cc-head"><div class="cc-title">Content Type</div><div class="cc-sub">how AI sources are classified</div></div><div class="cc-body">'+ctBars+'</div></div>'+
+      '<div class="cc"><div class="cc-head"><div class="cc-title">Page Type</div><div class="cc-sub">'+(useCompFilter?c.total:tdt).toLocaleString()+' citations'+(useCompFilter?' with '+activeCitComp:'')+'</div></div><div class="cc-body">'+(dtBars||'<p style="color:var(--ink4);font-size:13px;padding:12px">No data for this filter.</p>')+'</div></div>'+
+      '<div class="cc"><div class="cc-head"><div class="cc-title">Content Type</div><div class="cc-sub">'+(useCompFilter?'when '+activeCitComp+' is mentioned':'how AI sources are classified')+'</div></div><div class="cc-body">'+(ctBars||'<p style="color:var(--ink4);font-size:13px;padding:12px">No data for this filter.</p>')+'</div></div>'+
     '</div>'+
-    '<div class="cc"><div class="cc-head"><div class="cc-title">Top 20 Cited Domains</div><div class="cc-sub">'+(c.uniqueDomains||'')+' unique domains'+(activeModel!=='all'?' for '+(MODEL_META[activeModel]||{label:activeModel}).label:'')+'</div></div>'+
+    '<div class="cc"><div class="cc-head"><div class="cc-title">Top 20 Cited Domains</div><div class="cc-sub">'+subLabel+'</div></div>'+
       '<div class="cc-body np"><table class="dom-table"><thead><tr><th>#</th><th>Domain</th><th>Domain Type</th><th style="text-align:right">Citations</th></tr></thead><tbody>'+domRows+'</tbody></table></div>'+
     '</div>'+
-    (ltRows?'<div class="cc"><div class="cc-head"><div class="cc-title">Top Listicle Articles</div><div class="cc-sub">highest-priority inclusion targets</div></div><div class="cc-body np"><table class="dom-table"><thead><tr><th>Domain</th><th>Article</th><th style="text-align:right">Cited</th></tr></thead><tbody>'+ltRows+'</tbody></table></div></div>':'');
+    (ltRows?'<div class="cc"><div class="cc-head"><div class="cc-title">Top Listicle Articles</div><div class="cc-sub">'+(useCompFilter?'in '+activeCitComp+' responses':'highest-priority inclusion targets')+'</div></div><div class="cc-body np"><table class="dom-table"><thead><tr><th>Domain</th><th>Article</th><th style="text-align:right">Cited</th></tr></thead><tbody>'+ltRows+'</tbody></table></div></div>':'');
 }
 /* actions */
 function setActFilter(f,btn){actFilter=f;document.querySelectorAll('.act-fb').forEach(x=>x.classList.remove('active'));btn.classList.add('active');renderActionsGrid();}
