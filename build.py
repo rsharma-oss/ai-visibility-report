@@ -823,11 +823,16 @@ def js_obj_literal(py_obj):
 
 
 def inject_template(template_path, output_path, brands, D, DURL, DCAT, comp_domains,
-                    BRAND_CFG, ACTIONS, RAW_HISTORY):
+                    BRAND_CFG, ACTIONS, RAW_HISTORY, report_title=None):
     with open(template_path, encoding="utf-8") as f:
         html = f.read()
 
+    if not report_title:
+        brand_names = " & ".join(b["name"] for b in brands)
+        report_title = f"AI Visibility Report: {brand_names}"
+
     replacements = {
+        "%%REPORT_TITLE%%": report_title,
         "%%BRAND_TOGGLE%%": brand_toggle_html(brands),
         "%%DATA%%": js_obj_literal(D),
         "%%DOMAIN_URLS%%": js_obj_literal(DURL),
@@ -921,6 +926,7 @@ def main():
         BRAND_CFG,
         ACTIONS,
         RAW_HISTORY,
+        report_title=cfg.get("report_title"),
     )
     print(f"Done! Open {output_file} in your browser.")
 
