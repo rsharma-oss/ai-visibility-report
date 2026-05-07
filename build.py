@@ -57,6 +57,9 @@ PROVIDER_CONFIGS = {
         "default_model": "mistral-large-latest",
         "extra_headers": {},
     },
+    "claude-cli": {
+        "default_model": "claude-sonnet-4-6",
+    },
 }
 
 
@@ -254,6 +257,75 @@ def normalize_comp_name(name):
     return re.sub(r'[\s\-]', '', n)
 
 
+def extract_competitors_llm(full_responses, brand_name, provider, api_key, model, base_url=None):
+    """
+    LLM-based competitor extraction from full AI response texts.
+    full_responses: list of (text, model_key) tuples
+    Returns: list of (competitor_name, model_key) tuples — only real company/product names.
+    """
+    valid = [(t, mk) for t, mk in full_responses if t and len(t.strip()) > 80]
+    if not valid:
+        return []
+
+    _non_comp = {
+        "google", "youtube", "chatgpt", "gemini", "perplexity", "bing", "meta",
+        "facebook", "instagram", "tiktok", "twitter", "linkedin", "openai",
+        "anthropic", "claude", "gpt", "copilot", "wordpress", "shopify",
+        "woocommerce", "semrush", "ahrefs", "moz", "hubspot", "salesforce",
+        "mailchimp", "amazon", "sortlist", "clutch", "goodfirms", "thomasnet",
+    }
+
+    batch_size = 8
+    results = []
+    total_batches = (len(valid) + batch_size - 1) // batch_size
+
+    for i in range(0, len(valid), batch_size):
+        batch = valid[i:i + batch_size]
+        batch_num = i // batch_size + 1
+        print(f"    NLP batch {batch_num}/{total_batches} ({len(batch)} responses)...")
+
+        sections = [f"[RESPONSE {j+1}]\n{text[:2000]}" for j, (text, _) in enumerate(batch)]
+        batch_text = "\n\n---\n\n".join(sections)
+
+        system = (
+            f"Extract competitor company and product names from AI-generated responses about {brand_name}.\n\n"
+            f"Return ONLY a JSON object mapping response number (string key) to an array of company/brand names.\n"
+            f"Example: {{\"1\": [\"JR Automation\", \"Cognex\"], \"2\": [\"Siemens\", \"FANUC America\"]}}\n\n"
+            f"Rules:\n"
+            f"- Include: manufacturers, automation companies, tooling suppliers, integrators — any named company or product\n"
+            f"- Include names mentioned inline in prose, not just in structured lists\n"
+            f"- Use the most canonical short name (e.g. 'Cognex' not 'Cognex Corporation'; 'FANUC' not 'FANUC Robotics')\n"
+            f"- Exclude: AI/search platforms (Google, ChatGPT, Gemini, Perplexity, OpenAI, Bing, Meta)\n"
+            f"- Exclude: SEO/marketing tools (Semrush, Ahrefs, HubSpot, Salesforce, Mailchimp)\n"
+            f"- Exclude: generic phrases, section headers, descriptions, bullet labels — only real proper company names\n"
+            f"- Return ONLY valid JSON. No markdown fences, no explanation."
+        )
+
+        try:
+            raw = call_llm(provider, api_key, model, system, batch_text, base_url)
+            raw = re.sub(r'^```(?:json)?\s*|\s*```$', '', raw.strip(), flags=re.MULTILINE)
+            extracted = json.loads(raw)
+        except Exception as e:
+            print(f"    Warning: LLM NLP batch {batch_num} failed: {e}")
+            continue
+
+        for j, (text, mk) in enumerate(batch):
+            names = extracted.get(str(j + 1), [])
+            for name in names:
+                name = str(name).strip().rstrip('.,;:')
+                if not name or len(name) < 3 or len(name) > 70:
+                    continue
+                lower = name.lower()
+                if any(skip in lower for skip in _non_comp):
+                    continue
+                results.append((name, mk))
+
+        if i + batch_size < len(valid):
+            time.sleep(0.5)
+
+    return results
+
+
 def comp_domain_from_name(name):
     known = {
         "google": "google.com",
@@ -306,7 +378,7 @@ def _brand_context(text, brand_name, window=600):
     return excerpt
 
 
-def process_brand_data(api_key, brand_cfg):
+def process_brand_data(api_key, brand_cfg, llm_cfg=None):
     """Fetch and process all data for a single brand."""
     brand_id = brand_cfg["id"]
     brand_name = brand_cfg["name"]
@@ -316,8 +388,9 @@ def process_brand_data(api_key, brand_cfg):
     print(f"  Processing {len(prompts_raw)} prompts...")
 
     prompts_out = []
-    all_citations = []  # (url, title, model_key)
-    all_entities = []   # (name, entity_type, model_key)
+    all_citations = []       # (url, title, model_key)
+    all_entities = []        # (name, entity_type, model_key)
+    all_full_responses = []  # (text, model_key) for LLM NLP pass
     sentiment_mentions = []
     raw_prompt_history = []  # for time-range filtering in the frontend
 
@@ -408,46 +481,10 @@ def process_brand_data(api_key, brand_cfg):
                 if ent_type in ("competitor", "untracked"):
                     all_entities.append((ent.get("entityName") or ent.get("name", ""), "competitor", model_key))
 
-            # Also extract agency names from fullResponse text (catches untracked competitors)
+            # Collect full response for LLM NLP extraction pass (runs after history loop)
             full_resp = entry.get("fullResponse") or ""
             if full_resp:
-                existing_names = {
-                    (ent.get("entityName") or ent.get("name", "")).lower()
-                    for ent in (entry.get("brandMentions") or [])
-                }
-                # Patterns covering bold markdown, bullet lists, numbered lists, colon-inline
-                _extract_patterns = [
-                    r'\*\*([A-Z][A-Za-zÀ-ÿ &.\-]+?)(?:\s*[:·\|])',     # **Agency Name:**
-                    r'^\s*[\*\-]\s+([A-Z][A-Za-zÀ-ÿ &.\-]{3,40})\s*(?:[:–\|]|\n)',  # * Agency Name:
-                    r'^\s*\d+[\.\)]\s+([A-Z][A-Za-zÀ-ÿ &.\-]{3,40})\s*(?:[:–\|]|\n)',  # 1. Agency Name:
-                    r'^([A-Z][A-Za-zÀ-ÿ &.\-]{3,40}):\s+[A-Za-zÀ-ÿ]',  # Agency Name: description
-                ]
-                _non_agency = {
-                    "google", "youtube", "chatgpt", "gemini", "perplexity", "bing", "meta",
-                    "facebook", "instagram", "tiktok", "twitter", "linkedin", "openai",
-                    "anthropic", "claude", "gpt", "copilot", "wordpress", "shopify",
-                    "woocommerce", "prestashop", "magento", "semrush", "ahrefs", "moz",
-                    "hubspot", "salesforce", "mailchimp", "analytics", "search console",
-                    "amazon", "sortlist", "clutch", "goodfirms",
-                }
-                seen_in_entry = set(existing_names)
-                for pat in _extract_patterns:
-                    for m in re.finditer(pat, full_resp, re.MULTILINE | re.IGNORECASE):
-                        raw_name = m.group(1).strip().rstrip(".:,")
-                        if len(raw_name) < 4 or len(raw_name) > 50:
-                            continue
-                        lower_name = raw_name.lower()
-                        if any(skip in lower_name for skip in _non_agency):
-                            continue
-                        if lower_name in seen_in_entry:
-                            continue
-                        # Must look like a proper name (starts with capital, not all caps fragment)
-                        if not raw_name[0].isupper():
-                            continue
-                        if raw_name.upper() == raw_name and len(raw_name) < 6:
-                            continue
-                        seen_in_entry.add(lower_name)
-                        all_entities.append((raw_name, "competitor", model_key))
+                all_full_responses.append((full_resp, model_key))
 
             # ── Raw entry for frontend time-range filtering ───────────────
             entry_date = entry.get("date", "")
@@ -511,6 +548,25 @@ def process_brand_data(api_key, brand_cfg):
             "models": models_data,
         })
 
+    # ── LLM NLP competitor extraction pass ───────────────────────────────────
+    entities_from_api = len([e for e in all_entities if e[1] == "competitor"])
+    if llm_cfg and all_full_responses:
+        print(f"  Running LLM NLP extraction on {len(all_full_responses)} responses...")
+        llm_comps = extract_competitors_llm(
+            all_full_responses,
+            brand_name,
+            llm_cfg.get("provider"),
+            llm_cfg.get("api_key"),
+            llm_cfg.get("model"),
+            llm_cfg.get("base_url"),
+        )
+        for name, mk in llm_comps:
+            all_entities.append((name, "competitor", mk))
+        entities_from_llm = len(llm_comps)
+        print(f"  Competitor extraction: {entities_from_api} from API brandMentions + {entities_from_llm} from LLM NLP")
+    else:
+        print(f"  Competitor extraction: {entities_from_api} from API brandMentions (no LLM pass)")
+
     # ── Citations aggregation ─────────────────────────────────────────────────
     url_data = {}
     for url, title, model_key in all_citations:
@@ -572,30 +628,6 @@ def process_brand_data(api_key, brand_cfg):
     for domain in top_40_domains:
         urls_sorted = sorted(domain_url_list[domain], key=lambda x: -x["count"])[:12]
         durl_brand[domain] = urls_sorted
-
-    # ── Competitors aggregation ──────────────────────────────────────────────
-    comp_data = defaultdict(lambda: {"mentions": 0, "scores": [], "models": set(), "sentiments": []})
-    for name, etype, model_key in all_entities:
-        if not name:
-            continue
-        comp_data[name]["mentions"] += 1
-        comp_data[name]["models"].add(model_key)
-
-    competitors_out = []
-    for name, info in comp_data.items():
-        sents = info["sentiments"]
-        top_sent = max(set(sents), key=sents.count) if sents else "neutral"
-        competitors_out.append({
-            "name": name,
-            "mentions": info["mentions"],
-            "avgScore": 0,
-            "topSentiment": top_sent,
-            "models": sorted(info["models"]),
-            "summaries": [],
-        })
-    competitors_out.sort(key=lambda x: -x["mentions"])
-
-    comp_domains = {c["name"]: comp_domain_from_name(c["name"]) for c in competitors_out}
 
     # ── Sentiment summary ────────────────────────────────────────────────────
     sent_counts = {"positive": 0, "neutral": 0, "negative": 0, "uncertain": 0}
@@ -668,6 +700,35 @@ def process_brand_data(api_key, brand_cfg):
             name_to_canonical[n] = canonical
 
     all_entities = [(name_to_canonical.get(n, n), et, mk) for n, et, mk in all_entities]
+
+    # ── Competitors aggregation (after dedup so modelMentions uses canonical names) ──
+    comp_data = defaultdict(lambda: {
+        "mentions": 0, "scores": [], "models": set(),
+        "sentiments": [], "model_counts": defaultdict(int),
+    })
+    for name, etype, model_key in all_entities:
+        if not name:
+            continue
+        comp_data[name]["mentions"] += 1
+        comp_data[name]["models"].add(model_key)
+        comp_data[name]["model_counts"][model_key] += 1
+
+    competitors_out = []
+    for name, info in comp_data.items():
+        sents = info["sentiments"]
+        top_sent = max(set(sents), key=sents.count) if sents else "neutral"
+        competitors_out.append({
+            "name": name,
+            "mentions": info["mentions"],
+            "avgScore": 0,
+            "topSentiment": top_sent,
+            "models": sorted(info["models"]),
+            "modelMentions": dict(info["model_counts"]),
+            "summaries": [],
+        })
+    competitors_out.sort(key=lambda x: -x["mentions"])
+
+    comp_domains = {c["name"]: comp_domain_from_name(c["name"]) for c in competitors_out}
 
     # Apply canonical names to raw history and sentiment mention competitors
     for rp in raw_prompt_history:
@@ -779,7 +840,7 @@ Rules:
 
 def generate_actions(cfg, brand_name, brand_domain, data):
     provider = cfg.get("llm_provider", "anthropic")
-    api_key = cfg["llm_api_key"]
+    api_key = cfg.get("llm_api_key")
     pconf = PROVIDER_CONFIGS.get(provider, {})
     model = cfg.get("llm_model") or pconf.get("default_model", "gpt-4o")
     base_url = cfg.get("llm_base_url")
@@ -868,6 +929,17 @@ def main():
     output_file = cfg.get("output_file", "report.html")
     output_path = os.path.join(script_dir, output_file)
 
+    provider = cfg.get("llm_provider", "openai")
+    llm_api_key = cfg.get("llm_api_key") or cfg.get("anthropic_api_key")
+    llm_model = cfg.get("llm_model") or PROVIDER_CONFIGS.get(provider, {}).get("default_model")
+    llm_base_url = cfg.get("llm_base_url")
+    llm_cfg = {
+        "provider": provider,
+        "api_key": llm_api_key,
+        "model": llm_model,
+        "base_url": llm_base_url,
+    }
+
     if not os.path.exists(template_path):
         print(f"Error: template.html not found at {template_path}")
         sys.exit(1)
@@ -893,7 +965,7 @@ def main():
 
         print(f"\nProcessing brand: {brand_name}")
 
-        brand_data = process_brand_data(api_key, b)
+        brand_data = process_brand_data(api_key, b, llm_cfg=llm_cfg)
 
         D["prompts"][brand_name] = brand_data["prompts"]
         D["citations"][brand_name] = brand_data["citations"]

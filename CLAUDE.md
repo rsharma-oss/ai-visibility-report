@@ -224,11 +224,11 @@ Calling `_getCompCits(bk)` or `RAW_HISTORY[bk]` with the capitalized key always 
 
 Both build.py and template.html deduplicate competitors independently:
 
-**build.py** (`normalize_comp_name(name)`): strips domain TLDs, " AI" suffix — runs once at build time on all_entities and raw_history comps. Result stored in RAW_HISTORY.
+**build.py** (`normalize_comp_name(name)`): strips domain TLDs, " AI" suffix — runs at build time. `name_to_canonical` maps every variant to its canonical form. `all_entities` is remapped to canonical names before `comp_data` aggregation, so `competitors_out` entries are already merged with correct `modelMentions` counts.
 
 **JS** (`_normComp(name)`, `_dedupeComps(arr)`): client-side dedup for display lists. Run on `D.competitors[bk]` whenever competitors are rendered (competitor tab, citations dropdown, prompts icons).
 
-`_dedupeComps` groups by `_normComp` key, picks canonical name by highest `mentions` count, sums all mentions. Always call `_dedupeComps()` before rendering any competitor list.
+`_dedupeComps` groups by `_normComp` key, picks canonical name by highest `mentions` count, sums all mentions **and aggregates `modelMentions`** (summing per-model counts across merged entries). Always call `_dedupeComps()` before rendering any competitor list.
 
 `_buildCompCits` uses a two-pass approach: first groups all citation entries by `_normComp(compName)`, picks canonical, then stores under BOTH `canonical` name AND `__norm__<key>` fallback. Lookup tries both:
 ```js
@@ -308,10 +308,36 @@ Never hardcode "Rank 1 by Perplexity" — always derive the model dynamically fr
 These apply every time you build or debug a report. They prevent the most common output quality issues.
 
 ### Competitor data
-- `brandMentions[]` in history entries only contains entities that AI Peekaboo has tracked. The full AI response (`fullResponse`) always contains additional competitor agency names that are not in the tracked list.
-- `build.py` already runs a fullResponse regex extraction pass in addition to brandMentions. If you are debugging low competitor counts, verify this pass is running and the `_extract_patterns` list covers markdown bold (`**Name:**`), bullet lists, numbered lists, and inline colon patterns.
-- Filter out generic tools/platforms (Google, YouTube, ChatGPT, Semrush, Shopify, sortlist directories, etc.) from extracted names — these are not competitors.
-- Each competitor object in `competitors_out` must include a `modelMentions` key: a dict mapping model key → mention count for that model (e.g. `{"sonar": 18, "gpt-4o-mini": 15, ...}`). If this key is absent, the model filter in the competitor bars (`renderOverview()` and `renderCompetitors()`) will always show total counts instead of per-model counts and appear unresponsive to model selection. The `comp_data` accumulator in `process_brand_data()` tracks these via `model_counts: defaultdict(int)`, incremented on every entity append.
+
+Competitor extraction is a two-pass process — both passes contribute to `all_entities`, which is then deduplicated and aggregated into `competitors_out`.
+
+**Pass 1 — API `brandMentions[]`** (always runs):
+Reads `entry.get("brandMentions")` from each history entry and filters to `type == "competitor"` or `"untracked"`. These are companies AI Peekaboo has explicitly tracked. Fast and structured, but limited to what's in the monitored entity list.
+
+**Pass 2 — LLM NLP on `fullResponse`** (runs when `llm_cfg` is provided, which is always the case when using `config.json`):
+After the history loop completes, `extract_competitors_llm()` batches all collected `fullResponse` texts (8 per batch) and calls the configured LLM to extract real company names — including ones mentioned in plain prose, not just structured lists. The LLM is explicitly instructed to:
+- Include names mentioned inline in prose, not just bullet lists or headers
+- Use canonical short names (e.g. "Cognex" not "Cognex Corporation")
+- Exclude AI/search platforms, SEO tools, and generic phrases
+
+This replaces the old regex approach (which matched structural patterns like `**Name:**` or `1. Name:`) that produced large numbers of false positives (section headers, fragment phrases like "Tell me:" or "Best for:" counted as competitors). The LLM pass is semantically aware and only returns proper company names.
+
+**Ordering constraint — aggregation must happen after deduplication:**
+`comp_data` (which produces `competitors_out` and `modelMentions`) is built from `all_entities` **after** `normalize_comp_name` deduplication remaps all names to their canonical forms. This ensures that "Cognex" and "Cognex Corporation" both contribute to a single entry's `modelMentions`, so per-model counts sum correctly to the total. If you ever need to move code in `process_brand_data()`, preserve this order: dedup → aggregate.
+
+**`modelMentions` requirement:**
+Each competitor object in `competitors_out` must include a `modelMentions` key: a dict mapping model key → mention count for that model (e.g. `{"sonar": 18, "gpt-4o-mini": 15, ...}`). The `comp_data` accumulator tracks these via `model_counts: defaultdict(int)`, incremented on every entity append. The sum of all values in `modelMentions` must equal `mentions` (the total). If they don't match, deduplication ran before aggregation — check the ordering.
+
+**`_dedupeComps` in the template must aggregate `modelMentions`:**
+The JS `_dedupeComps()` function merges duplicate competitor entries client-side. It must aggregate `modelMentions` by summing per-model counts across merged entries — otherwise the per-model counts are lost after dedup. The current implementation does this correctly. If you rewrite `_dedupeComps`, always include:
+```js
+if(c.modelMentions){Object.keys(c.modelMentions).forEach(function(mk){
+  g.modelMentions[mk]=(g.modelMentions[mk]||0)+c.modelMentions[mk];
+});}
+```
+
+**Overview tab competitor bar must use `c.modelMentions[activeModel]`, not RAW_HISTORY counts:**
+The Overview tab's competitor mentions bar must read per-model counts from `c.modelMentions[activeModel]` (from `D.competitors`), not from `RAW_HISTORY.comps`. `RAW_HISTORY.comps` is populated only from API `brandMentions[]` — it does not include LLM NLP-extracted competitors, so any competitor found via the LLM pass would show 0 in the Overview bar if RAW_HISTORY counts are used.
 
 ### Sentiment context
 - The `context` field in each sentiment mention must come from a window of `fullResponse` text centred on the brand mention, not from `responseSnippet` (which is capped at 200 chars).
@@ -390,10 +416,11 @@ This section documents exactly what data source every render function uses when 
 | Element | Filtered data source | Notes |
 |---|---|---|
 | Competitor list | `comps.filter(c => c.models.indexOf(activeModel) > -1)` | Removes competitors with no data for active model |
-| Bar width `pct` | `c.modelMentions[activeModel]` via `dispCount` | Falls back to `c.mentions` |
-| Mention count label | `dispCount` (per-model) | Not `c.mentions` |
-| Bar scale `max` | `Math.max` of per-model `dispCount` values | Correct relative scaling |
-| Insight panel — dominant text | `_cDisp(c)` = `c.modelMentions[activeModel]` | Fixed 2026-05; was using `c.mentions` (global) |
+| Sort order (when filtered) | Re-sorted by `_dc(c)` = `c.modelMentions[activeModel]` desc | Without this re-sort, order stays as "all models" order |
+| Bar width `pct` | `_dc(c)` = `c.modelMentions[activeModel]` | `_dc` is a local helper defined inside `renderCompetitors` |
+| Mention count label | `_dc(c)` (per-model) | Not `c.mentions` |
+| Bar scale `max` | `_dc(comps[0])` after per-model sort | Correct relative scaling per model |
+| Insight panel — dominant text | `_dc(top3[0])` | Per-model count |
 | Insight panel — sentiment list | `c.topSentiment`, `c.avgScore` (global) | Sentiment/avgScore not broken down per-model in data |
 
 ### `renderCitations()` — citations tab
@@ -413,7 +440,7 @@ This section documents exactly what data source every render function uses when 
 | Element | Filtered data source | Notes |
 |---|---|---|
 | Model Coverage bars | Always per-model (iterates all models) | Not affected by `activeModel` filter |
-| Competitor Mentions bars | `c.modelMentions[activeModel]` via `dispCount` | Falls back to `c.mentions` |
+| Competitor Mentions bars | `c.modelMentions[activeModel]` from `D.competitors` | Read directly from the data object — NOT from RAW_HISTORY counts |
 | Sentiment Breakdown donut | `sentCounts` from filtered `sMentions` | `s.mentions.filter(m => m.model===activeModel)` |
 | Content Type donut | `mc.contentTypes` via `(mc&&mc.contentTypes)||cit.contentTypes` | `mc = D.modelCitations[bk][activeModel]` |
 | Page Type donut | `mc.domainTypes` via `(mc&&mc.domainTypes)||cit.domainTypes` | Same `mc` pattern |
