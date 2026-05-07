@@ -339,6 +339,9 @@ if(c.modelMentions){Object.keys(c.modelMentions).forEach(function(mk){
 **Overview tab competitor bar must use `c.modelMentions[activeModel]`, not RAW_HISTORY counts:**
 The Overview tab's competitor mentions bar must read per-model counts from `c.modelMentions[activeModel]` (from `D.competitors`), not from `RAW_HISTORY.comps`. `RAW_HISTORY.comps` is populated only from API `brandMentions[]` — it does not include LLM NLP-extracted competitors, so any competitor found via the LLM pass would show 0 in the Overview bar if RAW_HISTORY counts are used.
 
+**LLM NLP competitors are injected back into RAW_HISTORY entries (post-dedup step):**
+After `extract_competitors_llm()` returns and `name_to_canonical` deduplication has been applied, `process_brand_data()` runs a second pass that writes each LLM-extracted canonical competitor name back into the specific `raw_prompt_history` entry it came from (identified by `p_idx` / `e_idx` indices carried through the extraction pipeline). This means the `raw_comps` list per entry reflects **both** API `brandMentions[]` and LLM NLP extraction. As a result, `_buildPromptComps`, `_buildCompCits`, and all time-range filtering in the template automatically include LLM-extracted competitors — no special handling is required in the frontend. The injection deduplicates against existing `comps` in each entry to avoid double-counting.
+
 ### Sentiment context
 - The `context` field in each sentiment mention must come from a window of `fullResponse` text centred on the brand mention, not from `responseSnippet` (which is capped at 200 chars).
 - The `reason` field must come from `brandMentions[].mentionSummary` (where `entityName` matches the brand), falling back to the entry-level `mentionSummary`. The field `sentimentReason` does not exist in the API — using it always returns empty.

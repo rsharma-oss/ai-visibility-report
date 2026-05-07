@@ -260,10 +260,10 @@ def normalize_comp_name(name):
 def extract_competitors_llm(full_responses, brand_name, provider, api_key, model, base_url=None):
     """
     LLM-based competitor extraction from full AI response texts.
-    full_responses: list of (text, model_key) tuples
-    Returns: list of (competitor_name, model_key) tuples — only real company/product names.
+    full_responses: list of (text, model_key, p_idx, e_idx) tuples
+    Returns: list of (competitor_name, model_key, p_idx, e_idx) tuples — only real company/product names.
     """
-    valid = [(t, mk) for t, mk in full_responses if t and len(t.strip()) > 80]
+    valid = [(t, mk, pi, ei) for t, mk, pi, ei in full_responses if t and len(t.strip()) > 80]
     if not valid:
         return []
 
@@ -284,7 +284,7 @@ def extract_competitors_llm(full_responses, brand_name, provider, api_key, model
         batch_num = i // batch_size + 1
         print(f"    NLP batch {batch_num}/{total_batches} ({len(batch)} responses)...")
 
-        sections = [f"[RESPONSE {j+1}]\n{text[:2000]}" for j, (text, _) in enumerate(batch)]
+        sections = [f"[RESPONSE {j+1}]\n{text[:2000]}" for j, (text, _, _, _) in enumerate(batch)]
         batch_text = "\n\n---\n\n".join(sections)
 
         system = (
@@ -309,7 +309,7 @@ def extract_competitors_llm(full_responses, brand_name, provider, api_key, model
             print(f"    Warning: LLM NLP batch {batch_num} failed: {e}")
             continue
 
-        for j, (text, mk) in enumerate(batch):
+        for j, (text, mk, pi, ei) in enumerate(batch):
             names = extracted.get(str(j + 1), [])
             for name in names:
                 name = str(name).strip().rstrip('.,;:')
@@ -318,7 +318,7 @@ def extract_competitors_llm(full_responses, brand_name, provider, api_key, model
                 lower = name.lower()
                 if any(skip in lower for skip in _non_comp):
                     continue
-                results.append((name, mk))
+                results.append((name, mk, pi, ei))
 
         if i + batch_size < len(valid):
             time.sleep(0.5)
@@ -390,11 +390,11 @@ def process_brand_data(api_key, brand_cfg, llm_cfg=None):
     prompts_out = []
     all_citations = []       # (url, title, model_key)
     all_entities = []        # (name, entity_type, model_key)
-    all_full_responses = []  # (text, model_key) for LLM NLP pass
+    all_full_responses = []  # (text, model_key, p_idx, e_idx) for LLM NLP pass
     sentiment_mentions = []
     raw_prompt_history = []  # for time-range filtering in the frontend
 
-    for p in prompts_raw:
+    for p_idx, p in enumerate(prompts_raw):
         prompt_id = p.get("id") or p.get("promptId")
         prompt_text = p.get("promptText") or p.get("text") or ""
 
@@ -411,7 +411,7 @@ def process_brand_data(api_key, brand_cfg, llm_cfg=None):
         mentions_count = 0
         raw_entries = []  # per-entry raw data for this prompt
 
-        for entry in history:
+        for e_idx, entry in enumerate(history):
             model_key = entry.get("aiModel") or entry.get("model", "unknown")
             mentioned = entry.get("mentioned", False)
             score = entry.get("score", 0) or 0
@@ -484,7 +484,7 @@ def process_brand_data(api_key, brand_cfg, llm_cfg=None):
             # Collect full response for LLM NLP extraction pass (runs after history loop)
             full_resp = entry.get("fullResponse") or ""
             if full_resp:
-                all_full_responses.append((full_resp, model_key))
+                all_full_responses.append((full_resp, model_key, p_idx, e_idx))
 
             # ── Raw entry for frontend time-range filtering ───────────────
             entry_date = entry.get("date", "")
@@ -550,6 +550,7 @@ def process_brand_data(api_key, brand_cfg, llm_cfg=None):
 
     # ── LLM NLP competitor extraction pass ───────────────────────────────────
     entities_from_api = len([e for e in all_entities if e[1] == "competitor"])
+    llm_comps = []
     if llm_cfg and all_full_responses:
         print(f"  Running LLM NLP extraction on {len(all_full_responses)} responses...")
         llm_comps = extract_competitors_llm(
@@ -560,7 +561,7 @@ def process_brand_data(api_key, brand_cfg, llm_cfg=None):
             llm_cfg.get("model"),
             llm_cfg.get("base_url"),
         )
-        for name, mk in llm_comps:
+        for name, mk, _pi, _ei in llm_comps:
             all_entities.append((name, "competitor", mk))
         entities_from_llm = len(llm_comps)
         print(f"  Competitor extraction: {entities_from_api} from API brandMentions + {entities_from_llm} from LLM NLP")
@@ -737,6 +738,16 @@ def process_brand_data(api_key, brand_cfg, llm_cfg=None):
 
     for sm in sentiment_mentions:
         sm["competitors"] = [name_to_canonical.get(c, c) for c in sm["competitors"]]
+
+    # Inject LLM NLP competitors into raw_prompt_history entries so they appear
+    # in Prompts tab Top Competitors, Citations competitor filter, and time-range filtering.
+    for name, mk, p_idx, e_idx in llm_comps:
+        canonical = name_to_canonical.get(name, name)
+        if not canonical:
+            continue
+        entry_comps = raw_prompt_history[p_idx]["entries"][e_idx]["comps"]
+        if canonical not in entry_comps:
+            entry_comps.append(canonical)
 
     all_run_dates = sorted({e["date"] for p in raw_prompt_history for e in p["entries"] if e.get("date")})
 
