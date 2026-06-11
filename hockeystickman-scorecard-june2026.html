@@ -1,0 +1,760 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Hockey Stickman — AI Visibility Scorecard · June 2026</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --black: #0A0A0A;
+    --dark: #111111;
+    --card: #1A1A1A;
+    --border: #2A2A2A;
+    --red: #CC1F1F;
+    --red-light: #E53535;
+    --red-dim: rgba(204,31,31,0.15);
+    --white: #F5F5F5;
+    --muted: #888;
+    --subtle: #555;
+  }
+
+  body {
+    font-family: 'Inter', sans-serif;
+    background: var(--black);
+    color: var(--white);
+    min-height: 100vh;
+    padding: 0;
+  }
+
+  /* HEADER */
+  .header {
+    background: var(--dark);
+    border-bottom: 1px solid var(--border);
+    padding: 28px 48px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .header-left { display: flex; flex-direction: column; gap: 4px; }
+  .brand-name {
+    font-size: 22px;
+    font-weight: 800;
+    letter-spacing: -0.5px;
+    color: var(--white);
+  }
+  .brand-url { font-size: 12px; color: var(--muted); letter-spacing: 0.3px; }
+  .header-right { text-align: right; }
+  .report-label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 1.5px; }
+  .report-date { font-size: 14px; font-weight: 600; color: var(--white); margin-top: 2px; }
+
+  /* SCORE HERO */
+  .score-hero {
+    background: linear-gradient(135deg, #1A0000 0%, #0A0A0A 60%, #1A1A1A 100%);
+    padding: 52px 48px;
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    gap: 48px;
+    align-items: center;
+    border-bottom: 1px solid var(--border);
+    position: relative;
+    overflow: hidden;
+  }
+  .score-hero::before {
+    content: '';
+    position: absolute;
+    top: -80px;
+    left: -80px;
+    width: 320px;
+    height: 320px;
+    background: radial-gradient(circle, rgba(204,31,31,0.12) 0%, transparent 70%);
+    pointer-events: none;
+  }
+
+  /* DONUT */
+  .donut-wrap {
+    position: relative;
+    width: 160px;
+    height: 160px;
+    flex-shrink: 0;
+  }
+  .donut-wrap svg { width: 160px; height: 160px; transform: rotate(-90deg); }
+  .donut-track { fill: none; stroke: #2A2A2A; stroke-width: 14; }
+  .donut-fill { fill: none; stroke: var(--red); stroke-width: 14; stroke-linecap: round;
+    stroke-dasharray: 408; stroke-dashoffset: 387; /* 5% = 408 * 0.95 = 387.6 */
+    transition: stroke-dashoffset 1s ease; }
+  .donut-center {
+    position: absolute; top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    text-align: center;
+  }
+  .donut-score { font-size: 36px; font-weight: 900; color: var(--red); line-height: 1; }
+  .donut-max { font-size: 13px; color: var(--muted); font-weight: 500; }
+
+  /* HERO TEXT */
+  .hero-text {}
+  .hero-headline {
+    font-size: 28px;
+    font-weight: 800;
+    line-height: 1.25;
+    letter-spacing: -0.5px;
+    color: var(--white);
+    max-width: 540px;
+  }
+  .hero-headline span { color: var(--red); }
+  .hero-sub {
+    margin-top: 12px;
+    font-size: 14px;
+    color: var(--muted);
+    line-height: 1.6;
+    max-width: 520px;
+  }
+
+  /* HERO STATS */
+  .hero-stats {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    text-align: right;
+  }
+  .hero-stat-item {}
+  .hero-stat-val { font-size: 26px; font-weight: 800; color: var(--white); line-height: 1; }
+  .hero-stat-val.red { color: var(--red); }
+  .hero-stat-val.green { color: #3DBE7F; }
+  .hero-stat-label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.8px; margin-top: 3px; }
+
+  /* SECTION */
+  .section { padding: 40px 48px; border-bottom: 1px solid var(--border); }
+  .section-title {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    color: var(--muted);
+    font-weight: 600;
+    margin-bottom: 24px;
+  }
+
+  /* METRICS GRID */
+  .metrics-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+  }
+  .metric-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 20px;
+  }
+  .metric-val { font-size: 30px; font-weight: 800; color: var(--white); line-height: 1; }
+  .metric-val.red { color: var(--red); }
+  .metric-val.amber { color: #F59E0B; }
+  .metric-val.green { color: #3DBE7F; }
+  .metric-label { font-size: 12px; color: var(--muted); margin-top: 6px; line-height: 1.4; }
+  .metric-note { font-size: 11px; color: var(--subtle); margin-top: 4px; }
+
+  /* PROMPT TABLE */
+  .prompt-table { width: 100%; border-collapse: collapse; }
+  .prompt-table th {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--muted);
+    font-weight: 600;
+    padding: 8px 14px;
+    text-align: left;
+    border-bottom: 1px solid var(--border);
+  }
+  .prompt-table td {
+    padding: 12px 14px;
+    font-size: 13px;
+    border-bottom: 1px solid #1E1E1E;
+    vertical-align: middle;
+  }
+  .prompt-table tr:last-child td { border-bottom: none; }
+  .prompt-table tr:hover td { background: #141414; }
+
+  .score-pill {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 26px;
+    border-radius: 5px;
+    font-size: 12px;
+    font-weight: 700;
+  }
+  .score-zero { background: rgba(204,31,31,0.15); color: var(--red); }
+  .score-low { background: rgba(245,158,11,0.15); color: #F59E0B; }
+  .score-high { background: rgba(61,190,127,0.15); color: #3DBE7F; }
+
+  .intent-tag {
+    display: inline-block;
+    font-size: 10px;
+    font-weight: 600;
+    padding: 2px 7px;
+    border-radius: 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .intent-info { background: rgba(96,165,250,0.12); color: #60A5FA; }
+  .intent-comm { background: rgba(167,139,250,0.12); color: #A78BFA; }
+
+  .bar-wrap { display: flex; align-items: center; gap: 8px; }
+  .bar-bg { flex: 1; height: 4px; background: #2A2A2A; border-radius: 2px; }
+  .bar-fill { height: 4px; border-radius: 2px; }
+  .bar-red { background: var(--red); }
+  .bar-amber { background: #F59E0B; }
+  .bar-green { background: #3DBE7F; }
+
+  /* SOURCES GRID */
+  .sources-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+  }
+  .source-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px 16px;
+  }
+  .source-domain { font-size: 13px; font-weight: 500; color: var(--white); }
+  .source-domain.own { color: #3DBE7F; }
+  .source-meta { display: flex; align-items: center; gap: 12px; }
+  .source-count { font-size: 13px; font-weight: 700; color: var(--muted); }
+  .source-count.own { color: #3DBE7F; }
+  .source-models { display: flex; gap: 4px; }
+  .model-chip {
+    font-size: 9px;
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+  }
+  .chip-google { background: rgba(66,133,244,0.2); color: #4285F4; }
+  .chip-gemini { background: rgba(138,43,226,0.2); color: #AA55FF; }
+  .chip-gpt { background: rgba(16,163,127,0.2); color: #10A37F; }
+  .chip-perplexity { background: rgba(92,124,250,0.2); color: #5C7CFA; }
+
+  /* ACTIONS */
+  .actions-list { display: flex; flex-direction: column; gap: 16px; }
+  .action-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 24px;
+    display: grid;
+    grid-template-columns: 40px 1fr auto;
+    gap: 16px;
+    align-items: start;
+  }
+  .action-num {
+    width: 36px; height: 36px;
+    background: var(--red-dim);
+    border: 1px solid var(--red);
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 15px;
+    font-weight: 800;
+    color: var(--red);
+    flex-shrink: 0;
+  }
+  .action-body {}
+  .action-title { font-size: 15px; font-weight: 700; color: var(--white); }
+  .action-desc { font-size: 13px; color: var(--muted); margin-top: 6px; line-height: 1.6; }
+  .action-validation {
+    margin-top: 10px;
+    font-size: 11px;
+    color: var(--subtle);
+    background: #141414;
+    border-left: 2px solid var(--border);
+    padding: 8px 10px;
+    border-radius: 0 4px 4px 0;
+  }
+  .action-validation strong { color: #888; }
+  .action-impact {
+    text-align: right;
+    flex-shrink: 0;
+  }
+  .impact-val { font-size: 13px; font-weight: 700; color: #F59E0B; }
+  .impact-label { font-size: 10px; color: var(--subtle); text-transform: uppercase; letter-spacing: 0.5px; margin-top: 2px; }
+  .effort-label { font-size: 10px; color: var(--subtle); margin-top: 6px; }
+
+  /* COMPETITOR TABLE */
+  .comp-table { width: 100%; border-collapse: collapse; }
+  .comp-table th {
+    font-size: 10px; text-transform: uppercase; letter-spacing: 1px; color: var(--muted);
+    font-weight: 600; padding: 8px 14px; text-align: left; border-bottom: 1px solid var(--border);
+  }
+  .comp-table td {
+    padding: 12px 14px; font-size: 13px; border-bottom: 1px solid #1E1E1E; vertical-align: middle;
+  }
+  .comp-table tr:last-child td { border-bottom: none; }
+  .comp-brand { font-weight: 600; color: var(--white); }
+  .comp-brand.you { color: #3DBE7F; }
+  .you-badge {
+    display: inline-block;
+    font-size: 9px;
+    font-weight: 700;
+    padding: 1px 6px;
+    border-radius: 3px;
+    background: rgba(61,190,127,0.15);
+    color: #3DBE7F;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-left: 6px;
+  }
+
+  /* INSIGHT STRIP */
+  .insight-strip {
+    background: linear-gradient(90deg, rgba(204,31,31,0.08) 0%, transparent 100%);
+    border: 1px solid rgba(204,31,31,0.2);
+    border-radius: 10px;
+    padding: 18px 22px;
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+    margin-bottom: 28px;
+  }
+  .insight-icon { font-size: 20px; flex-shrink: 0; margin-top: 1px; }
+  .insight-text { font-size: 13px; color: #CCC; line-height: 1.6; }
+  .insight-text strong { color: var(--white); }
+
+  /* FOOTER */
+  .footer {
+    padding: 28px 48px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .footer-brand { font-size: 12px; color: var(--subtle); }
+  .footer-brand strong { color: var(--muted); }
+  .footer-note { font-size: 11px; color: var(--subtle); }
+
+  @media print {
+    body { background: #0A0A0A; }
+    .score-hero::before { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div class="header">
+  <div class="header-left">
+    <div class="brand-name">Hockey Stickman</div>
+    <div class="brand-url">hockeystickman.ca · Proudly Canadian Since 2010</div>
+  </div>
+  <div class="header-right">
+    <div class="report-label">AI Visibility Scorecard</div>
+    <div class="report-date">June 2026</div>
+  </div>
+</div>
+
+<!-- SCORE HERO -->
+<div class="score-hero">
+  <div class="donut-wrap">
+    <svg viewBox="0 0 160 160">
+      <circle class="donut-track" cx="80" cy="80" r="65"/>
+      <circle class="donut-fill" cx="80" cy="80" r="65"/>
+    </svg>
+    <div class="donut-center">
+      <div class="donut-score">5</div>
+      <div class="donut-max">/100</div>
+    </div>
+  </div>
+
+  <div class="hero-text">
+    <div class="hero-headline">290 blog posts. <span>AI can't find you.</span></div>
+    <div class="hero-sub">Hockey Stickman has more content than almost any hockey retailer online — yet AI models cite Reddit, pro stock resellers, and YouTube ahead of you on 8 of 10 buying queries. The content exists. The AI doesn't know it's there.</div>
+  </div>
+
+  <div class="hero-stats">
+    <div class="hero-stat-item">
+      <div class="hero-stat-val red">2/10</div>
+      <div class="hero-stat-label">Prompts Visible</div>
+    </div>
+    <div class="hero-stat-item">
+      <div class="hero-stat-val" style="color:#888">5</div>
+      <div class="hero-stat-label">AI Citations Earned</div>
+    </div>
+    <div class="hero-stat-item">
+      <div class="hero-stat-val green">#1</div>
+      <div class="hero-stat-label">Competitor Rank</div>
+    </div>
+  </div>
+</div>
+
+<!-- METRICS -->
+<div class="section">
+  <div class="section-title">Performance Metrics</div>
+
+  <div class="insight-strip">
+    <div class="insight-icon">⚡</div>
+    <div class="insight-text">
+      <strong>The .com domain is outperforming the .ca domain in AI citations.</strong> Google AIO and Gemini cite hockeystickman.com 5 times in responses to queries tracked against the .ca brand — meaning US shoppers find you before Canadian ones do.
+    </div>
+  </div>
+
+  <div class="metrics-grid">
+    <div class="metric-card">
+      <div class="metric-val red">5</div>
+      <div class="metric-label">Overall AI Visibility Score</div>
+      <div class="metric-note">Out of 100 · June 6 analysis</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-val amber">2/10</div>
+      <div class="metric-label">Prompts With Any Visibility</div>
+      <div class="metric-note">8 queries return zero mentions</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-val green">100</div>
+      <div class="metric-label">Best Single-Prompt Score</div>
+      <div class="metric-note">Rec league affordability query</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-val" style="color:#888">5</div>
+      <div class="metric-label">Total AI Citations Earned</div>
+      <div class="metric-note">Google AIO + Gemini only</div>
+    </div>
+  </div>
+</div>
+
+<!-- PROMPT BREAKDOWN -->
+<div class="section">
+  <div class="section-title">Prompt-Level Visibility</div>
+  <table class="prompt-table">
+    <thead>
+      <tr>
+        <th>Query</th>
+        <th>Intent</th>
+        <th>Avg Score</th>
+        <th>Best Score</th>
+        <th style="text-align:right">Runs</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td style="color:#888;max-width:360px">Our adult rec league needs affordable hockey sticks — options under $X?</td>
+        <td><span class="intent-tag intent-comm">Commercial</span></td>
+        <td>
+          <div class="bar-wrap">
+            <span class="score-pill score-low">28</span>
+            <div class="bar-bg"><div class="bar-fill bar-amber" style="width:28%"></div></div>
+          </div>
+        </td>
+        <td><span class="score-pill score-high">100</span></td>
+        <td style="text-align:right;color:#555">5</td>
+      </tr>
+      <tr>
+        <td style="color:#888;max-width:360px">What's the proper way to tape a hockey stick blade, and why?</td>
+        <td><span class="intent-tag intent-info">Informational</span></td>
+        <td>
+          <div class="bar-wrap">
+            <span class="score-pill score-low">25</span>
+            <div class="bar-bg"><div class="bar-fill bar-amber" style="width:25%"></div></div>
+          </div>
+        </td>
+        <td><span class="score-pill score-high">100</span></td>
+        <td style="text-align:right;color:#555">4</td>
+      </tr>
+      <tr>
+        <td style="color:#555;max-width:360px">Best hockey sticks for advanced players in 2026?</td>
+        <td><span class="intent-tag intent-comm">Commercial</span></td>
+        <td><span class="score-pill score-zero">0</span></td>
+        <td><span class="score-pill score-zero">0</span></td>
+        <td style="text-align:right;color:#555">5</td>
+      </tr>
+      <tr>
+        <td style="color:#555;max-width:360px">Do stick flex ratings really matter for casual players?</td>
+        <td><span class="intent-tag intent-info">Informational</span></td>
+        <td><span class="score-pill score-zero">0</span></td>
+        <td><span class="score-pill score-zero">0</span></td>
+        <td style="text-align:right;color:#555">5</td>
+      </tr>
+      <tr>
+        <td style="color:#555;max-width:360px">How do I figure out the right stick length as a beginner?</td>
+        <td><span class="intent-tag intent-info">Informational</span></td>
+        <td><span class="score-pill score-zero">0</span></td>
+        <td><span class="score-pill score-zero">0</span></td>
+        <td style="text-align:right;color:#555">5</td>
+      </tr>
+      <tr>
+        <td style="color:#555;max-width:360px">Composite vs wooden hockey sticks — what's better for intermediate players?</td>
+        <td><span class="intent-tag intent-comm">Commercial</span></td>
+        <td><span class="score-pill score-zero">0</span></td>
+        <td><span class="score-pill score-zero">0</span></td>
+        <td style="text-align:right;color:#555">5</td>
+      </tr>
+      <tr>
+        <td style="color:#555;max-width:360px">Top-rated hockey sticks for defensemen — what's worth the hype?</td>
+        <td><span class="intent-tag intent-comm">Commercial</span></td>
+        <td><span class="score-pill score-zero">0</span></td>
+        <td><span class="score-pill score-zero">0</span></td>
+        <td style="text-align:right;color:#555">5</td>
+      </tr>
+      <tr>
+        <td style="color:#555;max-width:360px">What hockey sticks are youth coaches recommending for beginners this year?</td>
+        <td><span class="intent-tag intent-comm">Commercial</span></td>
+        <td><span class="score-pill score-zero">0</span></td>
+        <td><span class="score-pill score-zero">0</span></td>
+        <td style="text-align:right;color:#555">4</td>
+      </tr>
+      <tr>
+        <td style="color:#555;max-width:360px">What's the difference between composite and wooden sticks?</td>
+        <td><span class="intent-tag intent-info">Informational</span></td>
+        <td><span class="score-pill score-zero">0</span></td>
+        <td><span class="score-pill score-zero">0</span></td>
+        <td style="text-align:right;color:#555">4</td>
+      </tr>
+      <tr>
+        <td style="color:#555;max-width:360px">Why do hockey sticks have a curve in the blade?</td>
+        <td><span class="intent-tag intent-info">Informational</span></td>
+        <td><span class="score-pill score-zero">0</span></td>
+        <td><span class="score-pill score-zero">0</span></td>
+        <td style="text-align:right;color:#555">4</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- WHO AI CITES INSTEAD -->
+<div class="section">
+  <div class="section-title">Who AI Cites Instead — Top Sources Across All Models</div>
+  <div class="sources-grid">
+    <div class="source-row">
+      <div class="source-domain">reddit.com</div>
+      <div class="source-meta">
+        <div class="source-count">42 mentions</div>
+        <div class="source-models">
+          <span class="model-chip chip-google">Google</span>
+          <span class="model-chip chip-gemini">Gemini</span>
+          <span class="model-chip chip-gpt">GPT</span>
+          <span class="model-chip chip-perplexity">Sonar</span>
+        </div>
+      </div>
+    </div>
+    <div class="source-row">
+      <div class="source-domain">prostockhockey.com</div>
+      <div class="source-meta">
+        <div class="source-count">40 mentions</div>
+        <div class="source-models">
+          <span class="model-chip chip-google">Google</span>
+          <span class="model-chip chip-gemini">Gemini</span>
+          <span class="model-chip chip-gpt">GPT</span>
+          <span class="model-chip chip-perplexity">Sonar</span>
+        </div>
+      </div>
+    </div>
+    <div class="source-row">
+      <div class="source-domain">youtube.com</div>
+      <div class="source-meta">
+        <div class="source-count">38 mentions</div>
+        <div class="source-models">
+          <span class="model-chip chip-google">Google</span>
+          <span class="model-chip chip-gemini">Gemini</span>
+          <span class="model-chip chip-perplexity">Sonar</span>
+        </div>
+      </div>
+    </div>
+    <div class="source-row">
+      <div class="source-domain">hockeymonkey.com</div>
+      <div class="source-meta">
+        <div class="source-count">25 mentions</div>
+        <div class="source-models">
+          <span class="model-chip chip-google">Google</span>
+          <span class="model-chip chip-gemini">Gemini</span>
+          <span class="model-chip chip-gpt">GPT</span>
+          <span class="model-chip chip-perplexity">Sonar</span>
+        </div>
+      </div>
+    </div>
+    <div class="source-row">
+      <div class="source-domain">icewarehouse.com</div>
+      <div class="source-meta">
+        <div class="source-count">17 mentions</div>
+        <div class="source-models">
+          <span class="model-chip chip-google">Google</span>
+          <span class="model-chip chip-gemini">Gemini</span>
+          <span class="model-chip chip-gpt">GPT</span>
+          <span class="model-chip chip-perplexity">Sonar</span>
+        </div>
+      </div>
+    </div>
+    <div class="source-row">
+      <div class="source-domain">sportsexcellence.com</div>
+      <div class="source-meta">
+        <div class="source-count">11 mentions</div>
+        <div class="source-models">
+          <span class="model-chip chip-google">Google</span>
+          <span class="model-chip chip-gpt">GPT</span>
+        </div>
+      </div>
+    </div>
+    <div class="source-row">
+      <div class="source-domain own">hockeystickman.com <span style="font-size:10px;color:#3DBE7F">(.com)</span></div>
+      <div class="source-meta">
+        <div class="source-count own">5 mentions</div>
+        <div class="source-models">
+          <span class="model-chip chip-google">Google</span>
+          <span class="model-chip chip-gemini">Gemini</span>
+        </div>
+      </div>
+    </div>
+    <div class="source-row" style="border-color:rgba(204,31,31,0.3)">
+      <div class="source-domain red" style="color:var(--red)">hockeystickman.ca <span style="font-size:10px">(.ca)</span></div>
+      <div class="source-meta">
+        <div class="source-count" style="color:var(--red)">0 mentions</div>
+        <div class="source-models" style="font-size:11px;color:#555">Not cited</div>
+      </div>
+    </div>
+  </div>
+  <div style="margin-top:14px;font-size:12px;color:var(--subtle);padding:0 2px">
+    ⚠ &nbsp;254 total AI citations tracked in the hockey sticks category. hockeystickman.ca earned 0. The .com domain earned 5 — both from Gemini and Google AIO only.
+  </div>
+</div>
+
+<!-- COMPETITIVE LANDSCAPE -->
+<div class="section">
+  <div class="section-title">Competitive Landscape — AI Visibility Score</div>
+  <div class="insight-strip" style="margin-bottom:20px;border-color:rgba(61,190,127,0.2);background:linear-gradient(90deg,rgba(61,190,127,0.06) 0%,transparent 100%)">
+    <div class="insight-icon">🏆</div>
+    <div class="insight-text">
+      <strong>Hockey Stickman ranks #1 among all tracked competitors</strong> — including Bauer and CCM. This is a category-wide problem, not a brand-specific one. Whoever acts first owns the AI channel in hockey retail.
+    </div>
+  </div>
+  <table class="comp-table">
+    <thead>
+      <tr>
+        <th>Brand</th>
+        <th>AI Visibility Score</th>
+        <th>Trend</th>
+        <th style="text-align:right">Monthly Web Visits</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><span class="comp-brand you">Hockey Stickman</span><span class="you-badge">You</span></td>
+        <td>
+          <div class="bar-wrap">
+            <span class="score-pill score-low">5</span>
+            <div class="bar-bg" style="max-width:160px"><div class="bar-fill" style="width:5%;background:#3DBE7F"></div></div>
+          </div>
+        </td>
+        <td style="color:#888">stable</td>
+        <td style="text-align:right;color:#555">—</td>
+      </tr>
+      <tr>
+        <td><span class="comp-brand">Bauer Hockey</span></td>
+        <td>
+          <div class="bar-wrap">
+            <span class="score-pill score-zero">4</span>
+            <div class="bar-bg" style="max-width:160px"><div class="bar-fill bar-red" style="width:4%"></div></div>
+          </div>
+        </td>
+        <td style="color:#3DBE7F">+100%</td>
+        <td style="text-align:right;color:#555">—</td>
+      </tr>
+      <tr>
+        <td><span class="comp-brand">CCM Hockey</span></td>
+        <td>
+          <div class="bar-wrap">
+            <span class="score-pill score-zero">2</span>
+            <div class="bar-bg" style="max-width:160px"><div class="bar-fill bar-red" style="width:2%"></div></div>
+          </div>
+        </td>
+        <td style="color:#3DBE7F">+100%</td>
+        <td style="text-align:right;color:#555">204,499</td>
+      </tr>
+      <tr>
+        <td><span class="comp-brand">HockeyShot</span></td>
+        <td>
+          <div class="bar-wrap">
+            <span class="score-pill score-zero">0</span>
+            <div class="bar-bg" style="max-width:160px"><div class="bar-fill bar-red" style="width:1%"></div></div>
+          </div>
+        </td>
+        <td style="color:#555">—</td>
+        <td style="text-align:right;color:#555">19,437</td>
+      </tr>
+      <tr>
+        <td><span class="comp-brand">Howie's Hockey Tape</span></td>
+        <td>
+          <div class="bar-wrap">
+            <span class="score-pill score-zero">0</span>
+            <div class="bar-bg" style="max-width:160px"><div class="bar-fill bar-red" style="width:1%"></div></div>
+          </div>
+        </td>
+        <td style="color:#555">—</td>
+        <td style="text-align:right;color:#555">35,115</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- ACTIONS -->
+<div class="section">
+  <div class="section-title">Validated Actions — June 2026</div>
+  <div class="actions-list">
+
+    <div class="action-card">
+      <div class="action-num">1</div>
+      <div class="action-body">
+        <div class="action-title">Rewrite llms.txt as a content authority brief, not just a commerce protocol</div>
+        <div class="action-desc">Your llms.txt exists — but it currently describes only Shopify's Universal Commerce Protocol (cart creation, checkout flow, agent purchasing). AI models reading this learn you're a shopping endpoint, not an authority on hockey equipment. Add a plain-language section declaring your expertise: 290+ articles, Pro Blackout™ original product line, Canadian retailer since 2010, pro stock sourcing knowledge. This is what gets cited.</div>
+        <div class="action-validation"><strong>Validated:</strong> llms.txt live at hockeystickman.ca/llms.txt — content confirmed to be commerce-only with zero mention of editorial content, expertise, or product authority. No rewrite required to existing pages.</div>
+      </div>
+      <div class="action-impact">
+        <div class="impact-val">+12–18 pts</div>
+        <div class="impact-label">Est. Score Lift</div>
+        <div class="effort-label" style="color:#3DBE7F">30 min</div>
+      </div>
+    </div>
+
+    <div class="action-card">
+      <div class="action-num">2</div>
+      <div class="action-body">
+        <div class="action-title">Create a "Stick Selector" hub page with FAQ schema — target the 8 invisible queries</div>
+        <div class="action-desc">8 of 10 tracked prompts return zero visibility — all buying and sizing queries (flex ratings, stick length, composite vs wood, defenseman sticks, youth recommendations). Your blog has 290+ articles on these exact topics, but they're spread across individual posts. Create one hub page that consolidates the answers with structured FAQ markup (JSON-LD). AI models prefer single authoritative sources over scattered blog archives.</div>
+        <div class="action-validation"><strong>Validated:</strong> Sitemap confirms 290 blog posts (2019–2026) across /blogs/news, /blogs/in-the-news, /blogs/guest-blog. No single hub or FAQ page found addressing stick selection. FAQ JSON-LD confirmed absent from blog pages.</div>
+      </div>
+      <div class="action-impact">
+        <div class="impact-val">+20–30 pts</div>
+        <div class="impact-label">Est. Score Lift</div>
+        <div class="effort-label" style="color:#F59E0B">1–2 days</div>
+      </div>
+    </div>
+
+    <div class="action-card">
+      <div class="action-num">3</div>
+      <div class="action-body">
+        <div class="action-title">Publish a "Pro Stock vs Retail — Canadian Buyer's Guide" and pitch it to AI models explicitly</div>
+        <div class="action-desc">prostockhockey.com earns 40 AI citations (vs your 0) because it owns the "pro stock" informational category. You sell pro stock too — but AI doesn't know that. Publish one long-form comparison guide optimized for the queries where prostockhockey.com dominates: "what is pro stock," "pro stock vs retail sticks," "where to buy pro stock in Canada." Add <code>SpeakableSpecification</code> markup and include it in your expanded llms.txt sitemap section. This directly targets the source stealing your citations.</div>
+        <div class="action-validation"><strong>Validated:</strong> prostockhockey.com appears 40× in AI citations. hockeystickman.ca has pro stock collections live (/collections/pro-stock) but no dedicated buying guide page comparing pro stock vs retail — confirmed via sitemap scan. No such page exists.</div>
+      </div>
+      <div class="action-impact">
+        <div class="impact-val">+15–25 pts</div>
+        <div class="impact-label">Est. Score Lift</div>
+        <div class="effort-label" style="color:#F59E0B">3–5 days</div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- FOOTER -->
+<div class="footer">
+  <div class="footer-brand">Prepared by <strong>Pragmatic AEO · Growth Automated</strong> · growthautomated.ai</div>
+  <div class="footer-note">Data via Peekaboo AI Visibility API · Analysis date June 6, 2026 · 5 AI models · 10 prompts · 46 runs</div>
+</div>
+
+</body>
+</html>

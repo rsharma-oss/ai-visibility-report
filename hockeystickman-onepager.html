@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Hockey Stickman — AI Visibility Insight</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Inter', sans-serif;
+    background: #F4F4F4;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    padding: 24px;
+  }
+
+  .card {
+    width: 900px;
+    background: #fff;
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 0 4px 40px rgba(0,0,0,0.10);
+  }
+
+  /* HERO */
+  .hero {
+    background: #0A0A0A;
+    padding: 44px 48px 40px;
+    position: relative;
+    overflow: hidden;
+  }
+  .hero::before {
+    content: '';
+    position: absolute;
+    top: -100px; right: -60px;
+    width: 360px; height: 360px;
+    background: radial-gradient(circle, rgba(204,31,31,0.18) 0%, transparent 70%);
+    pointer-events: none;
+  }
+  .hero-eyebrow {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: #CC1F1F;
+    margin-bottom: 16px;
+  }
+  .hero-headline {
+    font-size: 32px;
+    font-weight: 900;
+    line-height: 1.18;
+    color: #fff;
+    letter-spacing: -0.5px;
+    max-width: 600px;
+  }
+  .hero-headline em {
+    font-style: normal;
+    color: #CC1F1F;
+  }
+  .hero-sub {
+    margin-top: 14px;
+    font-size: 14px;
+    color: #888;
+    line-height: 1.65;
+    max-width: 560px;
+  }
+  .hero-score-badge {
+    position: absolute;
+    top: 44px;
+    right: 48px;
+    text-align: center;
+  }
+  .badge-val {
+    font-size: 52px;
+    font-weight: 900;
+    color: #CC1F1F;
+    line-height: 1;
+  }
+  .badge-label {
+    font-size: 11px;
+    color: #555;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-top: 4px;
+  }
+  .badge-sub {
+    font-size: 10px;
+    color: #444;
+    margin-top: 2px;
+  }
+
+  /* TENSION STRIP */
+  .tension {
+    background: #111;
+    padding: 16px 48px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .tension-text {
+    font-size: 13px;
+    color: #999;
+    line-height: 1.5;
+  }
+  .tension-text strong { color: #fff; }
+
+  /* STAT STRIP */
+  .stats {
+    background: #F8F8F8;
+    border-bottom: 1px solid #EBEBEB;
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+  }
+  .stat-item {
+    padding: 20px 24px;
+    border-right: 1px solid #EBEBEB;
+  }
+  .stat-item:last-child { border-right: none; }
+  .stat-val {
+    font-size: 26px;
+    font-weight: 800;
+    color: #111;
+    line-height: 1;
+  }
+  .stat-val.red { color: #CC1F1F; }
+  .stat-val.green { color: #1A8C4E; }
+  .stat-label {
+    font-size: 11px;
+    color: #888;
+    margin-top: 5px;
+    line-height: 1.4;
+  }
+
+  /* GAPS */
+  .gaps {
+    padding: 32px 48px;
+    background: #fff;
+  }
+  .gaps-header {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    color: #999;
+    margin-bottom: 20px;
+  }
+  .gap-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+  }
+  .gap-card {
+    border: 1.5px solid #EBEBEB;
+    border-radius: 10px;
+    padding: 20px;
+  }
+  .gap-card.highlight { border-color: #CC1F1F; background: #FFF8F8; }
+  .gap-icon {
+    font-size: 20px;
+    margin-bottom: 10px;
+  }
+  .gap-title {
+    font-size: 13px;
+    font-weight: 700;
+    color: #111;
+    line-height: 1.3;
+    margin-bottom: 7px;
+  }
+  .gap-desc {
+    font-size: 12px;
+    color: #777;
+    line-height: 1.6;
+  }
+  .gap-tag {
+    display: inline-block;
+    font-size: 10px;
+    font-weight: 600;
+    padding: 2px 7px;
+    border-radius: 4px;
+    margin-top: 8px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    background: #FDECEA;
+    color: #CC1F1F;
+  }
+  .gap-tag.amber { background: #FEF3C7; color: #92400E; }
+  .gap-tag.green { background: #ECFDF5; color: #065F46; }
+
+  /* OPPORTUNITY */
+  .opportunity {
+    background: #0A0A0A;
+    padding: 28px 48px;
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 32px;
+    align-items: center;
+  }
+  .opp-text {
+    font-size: 15px;
+    color: #ccc;
+    line-height: 1.6;
+    max-width: 520px;
+  }
+  .opp-text strong { color: #fff; }
+  .opp-cta {
+    text-align: right;
+    flex-shrink: 0;
+  }
+  .opp-label {
+    font-size: 11px;
+    color: #555;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 4px;
+  }
+  .opp-val {
+    font-size: 13px;
+    color: #CC1F1F;
+    font-weight: 700;
+  }
+
+  /* FOOTER */
+  .footer {
+    background: #F8F8F8;
+    border-top: 1px solid #EBEBEB;
+    padding: 16px 48px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .footer-brand {
+    font-size: 12px;
+    color: #999;
+  }
+  .footer-brand strong { color: #555; }
+  .footer-url {
+    font-size: 11px;
+    color: #BBB;
+  }
+</style>
+</head>
+<body>
+<div class="card">
+
+  <!-- HERO -->
+  <div class="hero">
+    <div class="hero-eyebrow">AI Visibility · June 2026</div>
+    <div class="hero-headline">Proudly Canadian since 2010.<br>AI sends hockey shoppers<br><em>to American sites instead.</em></div>
+    <div class="hero-sub">Hockey Stickman has 290+ articles, a signature stick line, and 15 years of pro stock expertise. On 8 of 10 buying queries, AI models don't mention you at all — citing prostockhockey.com (US) and Reddit ahead of Canada's own specialist.</div>
+    <div class="hero-score-badge">
+      <div class="badge-val">5</div>
+      <div class="badge-label">AI Score</div>
+      <div class="badge-sub">out of 100</div>
+    </div>
+  </div>
+
+  <!-- TENSION STRIP -->
+  <div class="tension">
+    <div class="tension-text">
+      <strong>254 total AI citations</strong> tracked across hockey stick queries. Hockey Stickman .ca earned <strong style="color:#CC1F1F">zero</strong>. Your .com domain earned 5 — meaning US shoppers find you before Canadians do.
+    </div>
+  </div>
+
+  <!-- STATS -->
+  <div class="stats">
+    <div class="stat-item">
+      <div class="stat-val red">2/10</div>
+      <div class="stat-label">Queries with any AI visibility</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-val">42</div>
+      <div class="stat-label">Reddit citations stealing your category</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-val">40</div>
+      <div class="stat-label">prostockhockey.com citations<br>(you have pro stock too)</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-val green">#1</div>
+      <div class="stat-label">Your rank vs Bauer, CCM &amp; HockeyShot</div>
+    </div>
+  </div>
+
+  <!-- GAPS -->
+  <div class="gaps">
+    <div class="gaps-header">Three gaps AI sees right now</div>
+    <div class="gap-grid">
+
+      <div class="gap-card highlight">
+        <div class="gap-icon">📄</div>
+        <div class="gap-title">llms.txt describes a checkout flow, not an expert</div>
+        <div class="gap-desc">Your llms.txt exists but only describes Shopify's commerce protocol — cart creation, checkout, payment. AI reads this and classifies you as a store, not a knowledge source. No mention of your 290 articles, Pro Blackout line, or 15 years of pro stock expertise.</div>
+        <div class="gap-tag">Highest impact · 30 min fix</div>
+      </div>
+
+      <div class="gap-card">
+        <div class="gap-icon">🗂️</div>
+        <div class="gap-title">290 articles, zero hub page — AI won't crawl a scattered archive</div>
+        <div class="gap-desc">You've written about flex ratings, stick length, composite vs wood, defenseman sticks — all the queries where you score zero. But the content lives in 290 individual blog posts. AI prefers one consolidated, FAQ-structured authority page over an archive.</div>
+        <div class="gap-tag amber">High impact · 1–2 days</div>
+      </div>
+
+      <div class="gap-card">
+        <div class="gap-icon">🇨🇦</div>
+        <div class="gap-title">No "Pro Stock in Canada" guide — a US site owns that query</div>
+        <div class="gap-desc">prostockhockey.com earns 40 AI citations because it owns the informational category. You sell pro stock. You're Canadian. You've been doing this since 2010. But there's no page that says so in a way AI can cite. One guide flips this.</div>
+        <div class="gap-tag amber">High impact · 3–5 days</div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- OPPORTUNITY -->
+  <div class="opportunity">
+    <div class="opp-text">
+      Bauer scores 4. CCM scores 2. HockeyShot and Howies score 0. <strong>The entire hockey retail category is invisible to AI</strong> — and you're already leading it. The brand that structures its expertise first will own this channel before any competitor notices it matters.
+    </div>
+    <div class="opp-cta">
+      <div class="opp-label">Category AI Gap</div>
+      <div class="opp-val">Wide open</div>
+      <div style="font-size:11px;color:#444;margin-top:8px">Bauer + CCM + HockeyShot<br>combined: 6/100</div>
+    </div>
+  </div>
+
+  <!-- FOOTER -->
+  <div class="footer">
+    <div class="footer-brand">Pragmatic AEO · <strong>Growth Automated</strong> · growthautomated.ai</div>
+    <div class="footer-url">Data: Peekaboo AI Visibility API · hockeystickman.ca · June 2026</div>
+  </div>
+
+</div>
+</body>
+</html>
